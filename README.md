@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# Agentic WezTerm Manager
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The Agentic WezTerm Manager is a web-based GUI application designed to give you a declarative, visual way to manage your WezTerm configuration. It uses a JSON file as the source of truth and generates a separate `agentic-wezterm.generated.lua` file. This ensures your manual Lua modifications remain untouched and separates your main configuration from the auto-generated components.
 
-Currently, two official plugins are available:
+*(Note: If you're looking for a Tmux configuration manager, this project specifically targets WezTerm!)*
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Quick Start
 
-## React Compiler
+Ensure you have Node.js and `npm` installed on your system.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
 
-## Expanding the ESLint configuration
+2. **Start the application:**
+   ```bash
+   npm run dev
+   ```
+   This will spin up both the Vite frontend server and the Express backend simultaneously.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+3. **Open the Manager:**
+   Navigate your browser to the local address provided by Vite (typically `http://localhost:5173/` or similar) to view and edit your configuration via the UI.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## ⚙️ How It Works
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+* **The GUI (Frontend):** A React/Tailwind application provides a categorized dashboard (General, Appearance, Behavior, Startup, Commands) where you can easily modify your WezTerm preferences, define startup layouts, and configure custom commands.
+* **The Server (Backend):** A local Node server that handles file writing.
+* **Configuration Source:** Your settings are saved securely as `agentic-wezterm.config.json` inside the project root directory.
+* **Generated output:** As soon as you hit **Save**, the backend immediately updates your config and compiles an `agentic-wezterm.generated.lua` file containing the updated variables and commands for WezTerm.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 🔌 Connecting to WezTerm
+
+To actually load these settings into WezTerm, you need to import the generated Lua file into your main `wezterm.lua` configuration file (which is usually located in `~/.wezterm.lua` or `$HOME/.config/wezterm/wezterm.lua`).
+
+1. Locate the absolute path to your `agentic-wezterm.generated.lua` file. (e.g., `C:/Repos/CLI/agentic-wezterm-manager/agentic-wezterm.generated.lua`).
+2. Add the following logic to your `wezterm.lua` to pull in the generated settings:
+
+```lua
+local wezterm = require 'wezterm'
+local config = wezterm.config_builder()
+
+-- Safely attempt to load the generated config
+local status, generated_config = pcall(dofile, "C:/Repos/CLI/agentic-wezterm-manager/agentic-wezterm.generated.lua")
+
+if status and generated_config then
+  -- Example of how to map a generated setting to the actual config
+  if generated_config.appearance then
+    config.color_scheme = generated_config.appearance.colorScheme
+    config.font_size = generated_config.appearance.font.size
+  end
+  
+  -- Add more mappings based on what you configured in the Web UI
+  -- ...
+else
+  wezterm.log_info("Agentic WezTerm config not found or failed to load. Using defaults.")
+end
+
+return config
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+> **Note:** The `agentic-wezterm.generated.lua` file returns a Lua dictionary containing all your settings. You'll need to map the returned properties onto the actual `wezterm.config_builder()` object in your primary config file.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 🛠️ Tech Stack
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+* **Frontend:** React, TypeScript, Vite, Tailwind CSS v4
+* **Backend:** Express, Node.js, `tsx` watcher
+* **Validation:** Zod
