@@ -1,0 +1,99 @@
+{
+  "workspaceName": "Obsidian",
+  "shell": "pwsh.exe",
+  "shellType": "pwsh",
+  "customShell": "",
+  "projectDir": "C:\\Users\\grego\\Documents\\Obsidian\\Knowledge",
+  "appearance": {
+    "colorScheme": "One Dark",
+    "font": {
+      "family": "Roboto Mono",
+      "size": 9,
+      "lineHeight": 1
+    },
+    "window": {
+      "decorations": "INTEGRATED_BUTTONS|RESIZE",
+      "startMaximized": true,
+      "useFancyTabBar": false,
+      "hideTabBarIfOnlyOneTab": false,
+      "windowBackgroundOpacity": 1,
+      "textBackgroundOpacity": 1,
+      "padding": {
+        "left": 8,
+        "right": 8,
+        "top": 6,
+        "bottom": 6
+      }
+    },
+    "cursor": {
+      "style": "BlinkingBlock",
+      "blinkRate": 800
+    },
+    "tabBar": {
+      "showIndex": true,
+      "atBottom": false
+    }
+  },
+  "behavior": {
+    "scrollbackLines": 100000,
+    "checkForUpdates": true,
+    "audibleBell": "Disabled",
+    "adjustWindowSizeWhenChangingFontSize": false,
+    "defaultDomain": "local",
+    "copyOnSelect": true
+  },
+  "startup": {
+    "enabled": true,
+    "commandDelayMs": 500,
+    "layout": {
+      "type": "quad",
+      "leftCommand": {
+        "command": "obsidian dev:console on",
+        "shellType": "inherit",
+        "customShell": ""
+      },
+      "rightTopCommand": {
+        "command": "\nsleep 1000\necho \"asd\"\nopenclaw status",
+        "shellType": "wsl",
+        "customShell": ""
+      },
+      "leftBottomCommand": {
+        "command": "echo \"Running Pieces\"\npieces",
+        "shellType": "inherit",
+        "customShell": ""
+      },
+      "rightBottomCommand": {
+        "command": "gemini",
+        "shellType": "inherit",
+        "customShell": ""
+      }
+    },
+    "extraTabs": []
+  },
+  "commands": {
+    "openclaw": {
+      "title": "openclaw",
+      "program": "",
+      "args": [],
+      "cwd": "",
+      "includeInLaunchMenu": true,
+      "includeHotkey": true,
+      "hotkey": ""
+    }
+  },
+  "themes": {},
+  "activeTheme": "",
+  "keybindings": [
+    {
+      "key": "N",
+      "mods": "CTRL",
+      "action": {
+        "type": "SpawnWindow",
+        "params": {}
+      },
+      "enabled": true,
+      "description": "Spawn Window",
+      "disableDefault": true
+    }
+  ]
+}

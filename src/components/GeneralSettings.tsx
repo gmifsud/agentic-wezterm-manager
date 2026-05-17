@@ -7,27 +7,27 @@ interface GeneralSettingsProps {
 
 export function GeneralSettings({ config, onUpdate }: GeneralSettingsProps) {
   return (
-    <div className="bg-[#161925] border border-slate-800 rounded-xl p-6 space-y-4 shadow-xl">
+    <div className="bg-card border border-border rounded-xl p-6 space-y-4 shadow-xl">
       <label className="block space-y-2">
-        <span className="text-sm font-medium text-slate-300">Workspace Name</span>
+        <span className="text-sm font-medium text-foreground">Workspace Name</span>
         <input
-          className="w-full bg-[#0a0c10] border border-slate-700 rounded p-2 text-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+          className="w-full bg-input border border-border rounded p-2 text-foreground focus:border-ring focus:ring-1 focus:ring-ring outline-none"
           value={config.workspaceName}
           onChange={e => onUpdate(c => c.workspaceName = e.target.value)}
         />
       </label>
       <label className="block space-y-2">
-        <span className="text-sm font-medium text-slate-300">Shell Default (Path/Executable)</span>
+        <span className="text-sm font-medium text-foreground">Shell Default (Path/Executable)</span>
         <input
-          className="w-full bg-[#0a0c10] border border-slate-700 rounded p-2 text-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+          className="w-full bg-input border border-border rounded p-2 text-foreground focus:border-ring focus:ring-1 focus:ring-ring outline-none"
           value={config.shell}
           onChange={e => onUpdate(c => c.shell = e.target.value)}
         />
       </label>
       <label className="block space-y-2">
-        <span className="text-sm font-medium text-slate-300">Project Directory</span>
+        <span className="text-sm font-medium text-foreground">Project Directory</span>
         <input
-          className="w-full bg-[#0a0c10] border border-slate-700 rounded p-2 text-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+          className="w-full bg-input border border-border rounded p-2 text-foreground focus:border-ring focus:ring-1 focus:ring-ring outline-none"
           value={config.projectDir}
           onChange={e => onUpdate(c => c.projectDir = e.target.value)}
         />

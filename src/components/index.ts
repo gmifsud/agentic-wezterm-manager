@@ -4,5 +4,8 @@ export { AppearanceSettings } from './AppearanceSettings';
 export { BehaviorSettings } from './BehaviorSettings';
 export { StartupSettings } from './StartupSettings';
 export { CommandsSettings } from './CommandsSettings';
+export { KeybindingsSettings } from './KeybindingsSettings';
+export { ThemesSettings } from './ThemesSettings';
+export { KeybindingEditorDialog } from './KeybindingEditorDialog';
 export { LuaPreview } from './LuaPreview';
 export { NewCommandDialog } from './NewCommandDialog';

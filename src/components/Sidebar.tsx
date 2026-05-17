@@ -3,11 +3,11 @@ interface SidebarProps {
   onTabChange: (tab: string) => void;
 }
 
-const tabs = ['general', 'appearance', 'behavior', 'startup', 'commands'];
+const tabs = ['general', 'appearance', 'themes', 'behavior', 'startup', 'commands', 'keybindings'];
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   return (
-    <div className="w-64 border-r border-slate-800 bg-[#161925] flex flex-col">
+    <div className="w-64 border-r border-border bg-card flex flex-col">
       <div className="p-6">
         <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
           Agentic WezTerm
@@ -20,8 +20,8 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             onClick={() => onTabChange(tab)}
             className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
               activeTab === tab
-                ? 'bg-blue-500/10 text-blue-400 font-medium'
-                : 'hover:bg-slate-800 text-slate-400'
+                ? 'bg-primary/10 text-primary font-medium'
+                : 'hover:bg-secondary text-muted-foreground'
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}

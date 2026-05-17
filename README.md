@@ -61,6 +61,25 @@ return config
 
 > **Note:** The `agentic-wezterm.generated.lua` file returns a Lua dictionary containing all your settings. You'll need to map the returned properties onto the actual `wezterm.config_builder()` object in your primary config file.
 
+## 📦 Packaging as a Standalone `.exe`
+
+For end users who don't want to install Node.js, the project can be packaged into a single Windows executable that starts the server and opens the browser automatically.
+
+```bash
+npm run package
+```
+
+Output: `release/agentic-wezterm-manager.exe` (≈85 MB). Double-click it and the web UI opens at `http://localhost:3001` (or the next free port). `agentic-wezterm.config.json` and `agentic-wezterm.generated.lua` are written next to the `.exe`.
+
+Useful env vars:
+- `PORT` — preferred port (default `3001`, auto-increments if busy)
+- `NO_OPEN=1` — skip the browser auto-open
+- `CONFIG_DIR` — override where the JSON/Lua files are written
+
+## 🎨 Theme
+
+The web UI's light/dark mode is derived from your WezTerm theme selection — no separate setting. Custom themes are classified by their background luminance; built-in WezTerm schemes are classified by name (e.g. "Tomorrow Night" → dark, "GitHub Light" → light). Pick a scheme in the **Appearance** tab or the **Themes** tab and the UI follows.
+
 ## 🛠️ Tech Stack
 
 * **Frontend:** React, TypeScript, Vite, Tailwind CSS v4

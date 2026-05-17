@@ -7,7 +7,7 @@ interface BehaviorSettingsProps {
 
 export function BehaviorSettings({ config, onUpdate }: BehaviorSettingsProps) {
   return (
-    <div className="bg-[#161925] border border-slate-800 rounded-xl p-6 space-y-4 shadow-xl">
+    <div className="bg-card border border-border rounded-xl p-6 space-y-4 shadow-xl">
       <label className="flex items-center space-x-3 cursor-pointer">
         <input
           type="checkbox"
@@ -15,7 +15,7 @@ export function BehaviorSettings({ config, onUpdate }: BehaviorSettingsProps) {
           checked={config.behavior.checkForUpdates}
           onChange={e => onUpdate(c => c.behavior.checkForUpdates = e.target.checked)}
         />
-        <span className="text-slate-300 font-medium">Check for WezTerm Updates</span>
+        <span className="text-foreground font-medium">Check for WezTerm Updates</span>
       </label>
       <label className="flex items-center space-x-3 cursor-pointer">
         <input
@@ -24,7 +24,7 @@ export function BehaviorSettings({ config, onUpdate }: BehaviorSettingsProps) {
           checked={config.behavior.copyOnSelect}
           onChange={e => onUpdate(c => c.behavior.copyOnSelect = e.target.checked)}
         />
-        <span className="text-slate-300 font-medium">Copy on Select</span>
+        <span className="text-foreground font-medium">Copy on Select</span>
       </label>
     </div>
   );
