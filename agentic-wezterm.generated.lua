@@ -5,11 +5,20 @@ local agentic = {
   customShell = '',
   projectDir = 'C:\\Users\\grego\\Documents\\Obsidian\\Knowledge',
 
+  metadata = {
+    isPackaged = false,
+    configDir = 'C:\\Repos\\CLI\\agentic-wezterm-manager',
+    configFile = 'C:\\Repos\\CLI\\agentic-wezterm-manager\\agentic-wezterm.config.json',
+    luaOutputFile = 'C:\\Repos\\CLI\\agentic-wezterm-manager\\agentic-wezterm.generated.lua',
+    luaHomeFile = null,
+    environment = 'dev'
+  },
+
   appearance = {
-    colorScheme = 'Brogrammer',
+    colorScheme = 'Monokai Pro Spectrum (Gogh)',
     font = {
       family = 'Roboto Mono',
-      size = 9,
+      size = 8,
       lineHeight = 1,
     },
     window = {
@@ -50,10 +59,10 @@ local agentic = {
     commandDelayMs = 500,
     layout = {
       type = 'quad',
-      leftCommand = { command = 'obsidian dev:console on', shellType = 'inherit', customShell = '' },
-      rightTopCommand = { command = 'echo "Booting openclaw ..."\nopenclaw logs --follow', shellType = 'wsl', customShell = '' },
-      leftBottomCommand = { command = 'echo "Running Pieces"\npieces', shellType = 'inherit', customShell = '' },
-      rightBottomCommand = { command = 'gemini', shellType = 'wsl', customShell = '' },
+      leftCommand = { command = 'sleep 2000\nobsidian dev:console on', shellType = 'inherit', customShell = '' },
+      rightTopCommand = { command = 'sleep 2000\necho "Booting openclaw ..."\n\nopenclaw logs --follow', shellType = 'wsl', customShell = '' },
+      leftBottomCommand = { command = 'sleep 2000\necho "Running Pieces"\npieces', shellType = 'inherit', customShell = '' },
+      rightBottomCommand = { command = 'sleep 2000\ngemini', shellType = 'wsl', customShell = '' },
     },
     extraTabs = {
 
@@ -73,7 +82,21 @@ local agentic = {
   },
 
   themes = {
-
+  ['Monokai Pro Spectrum (Gogh)'] = {
+    foreground = '#f7f1ff',
+    background = '#222222',
+    cursor_bg = '#bab6c0',
+    cursor_fg = '#faf6ff',
+    cursor_border = '#bab6c0',
+    selection_fg = '#f7f1ff',
+    selection_bg = '#525053',
+    scrollbar_thumb = '#222222',
+    split = '#222222',
+    compose_cursor = '#fce566',
+    ansi = { '#222222', '#fc618d', '#7bd88f', '#fce566', '#fd9353', '#948ae3', '#5ad4e6', '#f7f1ff' },
+    brights = { '#69676c', '#fc618d', '#7bd88f', '#fce566', '#fd9353', '#948ae3', '#5ad4e6', '#f7f1ff' },
+    
+  }
   },
 
   activeTheme = '',
@@ -224,10 +247,15 @@ function agentic.apply(config, wezterm, mux)
   config.default_cwd = data.projectDir
 
   -- Theme resolution: custom theme takes precedence over built-in color scheme
-  if data.activeTheme and data.activeTheme ~= '' and data.themes and data.themes[data.activeTheme] then
-    local theme = data.themes[data.activeTheme]
+  local theme_name = data.activeTheme
+  if (not theme_name or theme_name == '') then
+    theme_name = appearance.colorScheme
+  end
+
+  if theme_name and theme_name ~= '' and data.themes and data.themes[theme_name] then
+    local theme = data.themes[theme_name]
     config.color_schemes = {
-      [data.activeTheme] = {
+      [theme_name] = {
         foreground = theme.foreground,
         background = theme.background,
         cursor_bg = theme.cursor_bg,
@@ -242,7 +270,7 @@ function agentic.apply(config, wezterm, mux)
         brights = theme.brights,
       },
     }
-    config.color_scheme = data.activeTheme
+    config.color_scheme = theme_name
   elseif appearance.colorScheme then
     config.color_scheme = appearance.colorScheme
   end
@@ -387,6 +415,11 @@ function agentic.apply(config, wezterm, mux)
         })
       end
     end
+  end
+
+  -- Environment indicator
+  if data.metadata and data.metadata.environment then
+    wezterm.log_info("Agentic WezTerm Manager: Loaded " .. data.metadata.environment .. " config from " .. (data.metadata.luaOutputFile or "unknown path"))
   end
 
   return config

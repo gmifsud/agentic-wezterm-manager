@@ -5,6 +5,7 @@ import type {
   Keybinding,
   PaneConfig,
 } from "./schema";
+import { BUILTIN_SCHEME_PALETTES } from "./builtinSchemes";
 
 function str(val: string): string {
   return `'${val
@@ -86,7 +87,7 @@ function generateKeybindingLua(kb: Keybinding): string {
   return `    { key = '${kb.key}', mods = '${kb.mods}', action = ${actionLua}, enabled = ${kb.enabled}, description = '${kb.description.replace(/'/g, "\\'")}'${disableDefault} }`;
 }
 
-export function generateLuaText(config: AgenticConfig): string {
+export function generateLuaText(config: AgenticConfig, metadata?: any): string {
   const commandsLines: string[] = [];
   for (const [key, cmd] of Object.entries(config.commands)) {
     const argsStr = cmd.args.map(str).join(", ");
@@ -104,8 +105,19 @@ export function generateLuaText(config: AgenticConfig): string {
   const extraTabsLines: string[] =
     config.startup.extraTabs.map(generateExtraTabLua);
 
-  const themeEntries = Object.entries(config.themes);
-  const themesLines = themeEntries.map(([name, palette]) =>
+  // If no custom active theme, but we have a palette for the built-in color scheme,
+  // we add it to the themes block so WezTerm can find it.
+  const allThemes = { ...config.themes };
+  if (
+    !config.activeTheme &&
+    config.appearance.colorScheme &&
+    BUILTIN_SCHEME_PALETTES[config.appearance.colorScheme]
+  ) {
+    allThemes[config.appearance.colorScheme] =
+      BUILTIN_SCHEME_PALETTES[config.appearance.colorScheme];
+  }
+
+  const themesLines = Object.entries(allThemes).map(([name, palette]) =>
     generateThemeLua(name, palette),
   );
   const themesBlock = themesLines.length > 0 ? themesLines.join(",\n") : "";
@@ -118,12 +130,24 @@ export function generateLuaText(config: AgenticConfig): string {
 
   const activeThemeBlock = config.activeTheme ? str(config.activeTheme) : "''";
 
+  let metadataBlock = "";
+  if (metadata) {
+    const metadataEntries = Object.entries(metadata)
+      .map(
+        ([k, v]) =>
+          `    ${k} = ${typeof v === "string" ? str(v as string) : v}`,
+      )
+      .join(",\n");
+    metadataBlock = `\n  metadata = {\n${metadataEntries}\n  },`;
+  }
+
   return `local agentic = {
   workspaceName = ${str(config.workspaceName)},
   shell = ${str(config.shell)},
   shellType = ${str(config.shellType)},
   customShell = ${str(config.customShell)},
   projectDir = ${str(config.projectDir)},
+${metadataBlock}
 
   appearance = {
     colorScheme = ${str(config.appearance.colorScheme)},
@@ -336,10 +360,15 @@ function agentic.apply(config, wezterm, mux)
   config.default_cwd = data.projectDir
 
   -- Theme resolution: custom theme takes precedence over built-in color scheme
-  if data.activeTheme and data.activeTheme ~= '' and data.themes and data.themes[data.activeTheme] then
-    local theme = data.themes[data.activeTheme]
+  local theme_name = data.activeTheme
+  if (not theme_name or theme_name == '') then
+    theme_name = appearance.colorScheme
+  end
+
+  if theme_name and theme_name ~= '' and data.themes and data.themes[theme_name] then
+    local theme = data.themes[theme_name]
     config.color_schemes = {
-      [data.activeTheme] = {
+      [theme_name] = {
         foreground = theme.foreground,
         background = theme.background,
         cursor_bg = theme.cursor_bg,
@@ -354,7 +383,7 @@ function agentic.apply(config, wezterm, mux)
         brights = theme.brights,
       },
     }
-    config.color_scheme = data.activeTheme
+    config.color_scheme = theme_name
   elseif appearance.colorScheme then
     config.color_scheme = appearance.colorScheme
   end
@@ -499,6 +528,11 @@ function agentic.apply(config, wezterm, mux)
         })
       end
     end
+  end
+
+  -- Environment indicator
+  if data.metadata and data.metadata.environment then
+    wezterm.log_info("Agentic WezTerm Manager: Loaded " .. data.metadata.environment .. " config from " .. (data.metadata.luaOutputFile or "unknown path"))
   end
 
   return config

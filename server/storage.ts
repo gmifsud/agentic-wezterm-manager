@@ -1,28 +1,36 @@
-import fs from 'fs';
-import path from 'path';
-import { AgenticConfig, agenticConfigSchema } from '../shared/schema';
-import { generateLuaText } from '../shared/lua-generator';
+import fs from "fs";
+import path from "path";
+import { AgenticConfig, agenticConfigSchema } from "../shared/schema";
+import { generateLuaText } from "../shared/lua-generator";
 
 export { generateLuaText };
 
 // When packaged with pkg, `process.pkg` is defined and `process.cwd()` is the
 // caller's directory, not the project. Fall back to the .exe's own directory so
 // the config sits next to the executable.
-const isPackaged = typeof (process as { pkg?: unknown }).pkg !== 'undefined';
+const isPackaged = typeof (process as { pkg?: unknown }).pkg !== "undefined";
 const CONFIG_DIR =
   process.env.CONFIG_DIR ||
   (isPackaged ? path.dirname(process.execPath) : process.cwd());
-const CONFIG_FILE = path.join(CONFIG_DIR, 'agentic-wezterm.config.json');
-const LUA_OUTPUT_FILE = path.join(CONFIG_DIR, 'agentic-wezterm.generated.lua');
+const CONFIG_FILE = path.join(CONFIG_DIR, "agentic-wezterm.config.json");
+const LUA_OUTPUT_FILE = path.join(CONFIG_DIR, "agentic-wezterm.generated.lua");
+
+// When packaged, also write the generated lua to the user's home directory
+// so the wezterm.lua can find it without a hardcoded path.
+const HOME_DIR = process.env.USERPROFILE || process.env.HOME || process.cwd();
+const LUA_HOME_FILE = path.join(HOME_DIR, ".agentic-wezterm.generated.lua");
 
 function normalizeConfig(config: AgenticConfig): AgenticConfig {
   return {
     ...config,
-    shellType: config.shellType || 'pwsh',
-    customShell: config.customShell || '',
+    shellType: config.shellType || "pwsh",
+    customShell: config.customShell || "",
     behavior: {
       ...config.behavior,
-      defaultDomain: config.behavior.defaultDomain === 'DefaultDomain' ? 'local' : config.behavior.defaultDomain,
+      defaultDomain:
+        config.behavior.defaultDomain === "DefaultDomain"
+          ? "local"
+          : config.behavior.defaultDomain,
     },
     startup: {
       ...config.startup,
@@ -34,31 +42,57 @@ function normalizeConfig(config: AgenticConfig): AgenticConfig {
 export function loadConfig(): AgenticConfig {
   if (fs.existsSync(CONFIG_FILE)) {
     try {
-      const data = fs.readFileSync(CONFIG_FILE, 'utf-8');
+      const data = fs.readFileSync(CONFIG_FILE, "utf-8");
       const parsed = JSON.parse(data);
       return normalizeConfig(agenticConfigSchema.parse(parsed));
     } catch (err) {
-      console.error('Error parsing config, returning default', err);
+      console.error("Error parsing config, returning default", err);
     }
   }
   return normalizeConfig(agenticConfigSchema.parse({}));
+}
+
+export function getMetadata() {
+  return {
+    isPackaged,
+    configDir: CONFIG_DIR,
+    configFile: CONFIG_FILE,
+    luaOutputFile: LUA_OUTPUT_FILE,
+    luaHomeFile: isPackaged ? LUA_HOME_FILE : null,
+    environment: isPackaged
+      ? "production"
+      : process.env.NODE_ENV === "test"
+        ? "test"
+        : "dev",
+  };
 }
 
 export function saveConfig(config: AgenticConfig): void {
   const normalizedConfig = normalizeConfig(config);
 
   try {
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(normalizedConfig, null, 2), 'utf-8');
+    fs.writeFileSync(
+      CONFIG_FILE,
+      JSON.stringify(normalizedConfig, null, 2),
+      "utf-8",
+    );
   } catch (err) {
-    console.error('Failed to write config file:', err);
-    throw new Error('Failed to save configuration');
+    console.error("Failed to write config file:", err);
+    throw new Error("Failed to save configuration");
   }
 
   try {
-    const luaContent = generateLuaText(normalizedConfig);
-    fs.writeFileSync(LUA_OUTPUT_FILE, luaContent, 'utf-8');
+    const metadata = getMetadata();
+    const luaContent = generateLuaText(normalizedConfig, metadata);
+    fs.writeFileSync(LUA_OUTPUT_FILE, luaContent, "utf-8");
+
+    // When packaged, also write to the user's home directory so wezterm.lua
+    // can find it without a hardcoded path.
+    if (isPackaged) {
+      fs.writeFileSync(LUA_HOME_FILE, luaContent, "utf-8");
+    }
   } catch (err) {
-    console.error('Failed to write Lua file:', err);
-    throw new Error('Failed to generate Lua configuration');
+    console.error("Failed to write Lua file:", err);
+    throw new Error("Failed to generate Lua configuration");
   }
 }

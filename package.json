@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "build:server": "esbuild server/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist-server/index.cjs",
     "build:all": "npm run build && npm run build:server",
+    "rebuild-package": "if exist dist rmdir /s /q dist && if exist dist-server rmdir /s /q dist-server && npm run package",
     "start": "node dist-server/index.cjs",
     "package": "npm run build:all && pkg . --out-path release",
     "update:schemes": "node scripts/fetch-builtin-schemes.mjs",

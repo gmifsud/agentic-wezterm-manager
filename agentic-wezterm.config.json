@@ -5,10 +5,10 @@
   "customShell": "",
   "projectDir": "C:\\Users\\grego\\Documents\\Obsidian\\Knowledge",
   "appearance": {
-    "colorScheme": "Brogrammer",
+    "colorScheme": "Monokai Pro Spectrum (Gogh)",
     "font": {
       "family": "Roboto Mono",
-      "size": 9,
+      "size": 8,
       "lineHeight": 1
     },
     "window": {
@@ -48,22 +48,22 @@
     "layout": {
       "type": "quad",
       "leftCommand": {
-        "command": "obsidian dev:console on",
+        "command": "sleep 2000\nobsidian dev:console on",
         "shellType": "inherit",
         "customShell": ""
       },
       "rightTopCommand": {
-        "command": "echo \"Booting openclaw ...\"\nopenclaw logs --follow",
+        "command": "sleep 2000\necho \"Booting openclaw ...\"\n\nopenclaw logs --follow",
         "shellType": "wsl",
         "customShell": ""
       },
       "leftBottomCommand": {
-        "command": "echo \"Running Pieces\"\npieces",
+        "command": "sleep 2000\necho \"Running Pieces\"\npieces",
         "shellType": "inherit",
         "customShell": ""
       },
       "rightBottomCommand": {
-        "command": "gemini",
+        "command": "sleep 2000\ngemini",
         "shellType": "wsl",
         "customShell": ""
       }

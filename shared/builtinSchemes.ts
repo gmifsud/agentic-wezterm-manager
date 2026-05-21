@@ -5,7 +5,7 @@
 // Maps WezTerm built-in colour scheme names → ColorPalette so the web UI can
 // restyle itself to match the terminal theme. Schemes not listed here fall
 // back to the light/dark heuristic in src/lib/themeMode.ts.
-import type { ColorPalette } from '../../shared/schema';
+import type { ColorPalette } from './schema';
 
 export const BUILTIN_SCHEME_PALETTES: Record<string, ColorPalette> = {
   "Afterglow": {
@@ -608,7 +608,7 @@ export const BUILTIN_SCHEME_PALETTES: Record<string, ColorPalette> = {
     brights: ["#6e7066", "#f92672", "#a6e22e", "#e6db74", "#fd971f", "#ae81ff", "#66d9ef", "#fdfff1"],
     indexed: {},
   },
-  "Monokai Pro": {
+  "Monokai Pro (Gogh)": {
     foreground: "#fcfcfa",
     background: "#2d2a2e",
     cursor_bg: "#c1c0c0",
@@ -621,6 +621,66 @@ export const BUILTIN_SCHEME_PALETTES: Record<string, ColorPalette> = {
     compose_cursor: "#ffd866",
     ansi: ["#2d2a2e", "#ff6188", "#a9dc76", "#ffd866", "#fc9867", "#ab9df2", "#78dce8", "#fcfcfa"],
     brights: ["#727072", "#ff6188", "#a9dc76", "#ffd866", "#fc9867", "#ab9df2", "#78dce8", "#fcfcfa"],
+    indexed: {},
+  },
+  "Monokai Pro Machine (Gogh)": {
+    foreground: "#f2fffc",
+    background: "#273136",
+    cursor_bg: "#b8c4c3",
+    cursor_fg: "#859190",
+    cursor_border: "#b8c4c3",
+    selection_fg: "#f2fffc",
+    selection_bg: "#545f62",
+    scrollbar_thumb: "#273136",
+    split: "#273136",
+    compose_cursor: "#ffed72",
+    ansi: ["#273136", "#ff6d7e", "#a2e57b", "#ffed72", "#ffb270", "#baa0f8", "#7cd5f1", "#f2fffc"],
+    brights: ["#6b7678", "#ff6d7e", "#a2e57b", "#ffed72", "#ffb270", "#baa0f8", "#7cd5f1", "#f2fffc"],
+    indexed: {},
+  },
+  "Monokai Pro Octagon (Gogh)": {
+    foreground: "#eaf2f1",
+    background: "#282a3a",
+    cursor_bg: "#b2b9bd",
+    cursor_fg: "#f2f9fd",
+    cursor_border: "#b2b9bd",
+    selection_fg: "#eaf2f1",
+    selection_bg: "#535763",
+    scrollbar_thumb: "#282a3a",
+    split: "#282a3a",
+    compose_cursor: "#ffd76d",
+    ansi: ["#282a3a", "#ff657a", "#bad761", "#ffd76d", "#ff9b5e", "#c39ac9", "#9cd1bb", "#eaf2f1"],
+    brights: ["#696d77", "#ff657a", "#bad761", "#ffd76d", "#ff9b5e", "#c39ac9", "#9cd1bb", "#eaf2f1"],
+    indexed: {},
+  },
+  "Monokai Pro Ristretto (Gogh)": {
+    foreground: "#fff1f3",
+    background: "#2c2525",
+    cursor_bg: "#c3b7b8",
+    cursor_fg: "#fff7f8",
+    cursor_border: "#c3b7b8",
+    selection_fg: "#fff1f3",
+    selection_bg: "#5b5353",
+    scrollbar_thumb: "#2c2525",
+    split: "#2c2525",
+    compose_cursor: "#f9cc6c",
+    ansi: ["#2c2525", "#fd6883", "#adda78", "#f9cc6c", "#f38d70", "#a8a9eb", "#85dacc", "#fff1f3"],
+    brights: ["#72696a", "#fd6883", "#adda78", "#f9cc6c", "#f38d70", "#a8a9eb", "#85dacc", "#fff1f3"],
+    indexed: {},
+  },
+  "Monokai Pro Spectrum (Gogh)": {
+    foreground: "#f7f1ff",
+    background: "#222222",
+    cursor_bg: "#bab6c0",
+    cursor_fg: "#faf6ff",
+    cursor_border: "#bab6c0",
+    selection_fg: "#f7f1ff",
+    selection_bg: "#525053",
+    scrollbar_thumb: "#222222",
+    split: "#222222",
+    compose_cursor: "#fce566",
+    ansi: ["#222222", "#fc618d", "#7bd88f", "#fce566", "#fd9353", "#948ae3", "#5ad4e6", "#f7f1ff"],
+    brights: ["#69676c", "#fc618d", "#7bd88f", "#fce566", "#fd9353", "#948ae3", "#5ad4e6", "#f7f1ff"],
     indexed: {},
   },
   "Night Owlish Light": {

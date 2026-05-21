@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import type { AgenticConfig } from '../shared/schema';
-import { generateLuaText } from '../shared/lua-generator';
-import { deriveUiMode } from './lib/themeMode';
-import { resolveActivePalette, applyPaletteToRoot } from './lib/themePalette';
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { AgenticConfig } from "../shared/schema";
+import { generateLuaText } from "../shared/lua-generator";
+import { deriveUiMode } from "./lib/themeMode";
+import { resolveActivePalette, applyPaletteToRoot } from "./lib/themePalette";
 import {
   Sidebar,
   GeneralSettings,
@@ -14,31 +14,65 @@ import {
   ThemesSettings,
   LuaPreview,
   NewCommandDialog,
-} from './components';
+} from "./components";
 
-const MIN_PREVIEW_WIDTH = 280;
+const MIN_PREVIEW_WIDTH = 380;
 const MAX_PREVIEW_WIDTH = 800;
 const DEFAULT_PREVIEW_WIDTH = 384;
 
-function diffConfigs(oldConfig: AgenticConfig | null, newConfig: AgenticConfig): string[] {
-  if (!oldConfig) return ['Initial load'];
+function diffConfigs(
+  oldConfig: AgenticConfig | null,
+  newConfig: AgenticConfig,
+): string[] {
+  if (!oldConfig) return ["Initial load"];
   const changes: string[] = [];
 
-  if (oldConfig.workspaceName !== newConfig.workspaceName) changes.push(`Workspace name: "${oldConfig.workspaceName}" → "${newConfig.workspaceName}"`);
-  if (oldConfig.shell !== newConfig.shell) changes.push(`Shell: "${oldConfig.shell}" → "${newConfig.shell}"`);
-  if (oldConfig.shellType !== newConfig.shellType) changes.push(`Shell type: "${oldConfig.shellType}" → "${newConfig.shellType}"`);
-  if (oldConfig.projectDir !== newConfig.projectDir) changes.push(`Project dir changed`);
+  if (oldConfig.workspaceName !== newConfig.workspaceName)
+    changes.push(
+      `Workspace name: "${oldConfig.workspaceName}" → "${newConfig.workspaceName}"`,
+    );
+  if (oldConfig.shell !== newConfig.shell)
+    changes.push(`Shell: "${oldConfig.shell}" → "${newConfig.shell}"`);
+  if (oldConfig.shellType !== newConfig.shellType)
+    changes.push(
+      `Shell type: "${oldConfig.shellType}" → "${newConfig.shellType}"`,
+    );
+  if (oldConfig.projectDir !== newConfig.projectDir)
+    changes.push(`Project dir changed`);
 
-  if (oldConfig.appearance.colorScheme !== newConfig.appearance.colorScheme) changes.push(`Color scheme: "${oldConfig.appearance.colorScheme}" → "${newConfig.appearance.colorScheme}"`);
-  if (oldConfig.appearance.font.family !== newConfig.appearance.font.family) changes.push(`Font: "${oldConfig.appearance.font.family}" → "${newConfig.appearance.font.family}"`);
-  if (oldConfig.appearance.font.size !== newConfig.appearance.font.size) changes.push(`Font size: ${oldConfig.appearance.font.size} → ${newConfig.appearance.font.size}`);
-  if (oldConfig.appearance.window.windowBackgroundOpacity !== newConfig.appearance.window.windowBackgroundOpacity) changes.push(`Window opacity: ${oldConfig.appearance.window.windowBackgroundOpacity} → ${newConfig.appearance.window.windowBackgroundOpacity}`);
+  if (oldConfig.appearance.colorScheme !== newConfig.appearance.colorScheme)
+    changes.push(
+      `Color scheme: "${oldConfig.appearance.colorScheme}" → "${newConfig.appearance.colorScheme}"`,
+    );
+  if (oldConfig.appearance.font.family !== newConfig.appearance.font.family)
+    changes.push(
+      `Font: "${oldConfig.appearance.font.family}" → "${newConfig.appearance.font.family}"`,
+    );
+  if (oldConfig.appearance.font.size !== newConfig.appearance.font.size)
+    changes.push(
+      `Font size: ${oldConfig.appearance.font.size} → ${newConfig.appearance.font.size}`,
+    );
+  if (
+    oldConfig.appearance.window.windowBackgroundOpacity !==
+    newConfig.appearance.window.windowBackgroundOpacity
+  )
+    changes.push(
+      `Window opacity: ${oldConfig.appearance.window.windowBackgroundOpacity} → ${newConfig.appearance.window.windowBackgroundOpacity}`,
+    );
 
-  if (oldConfig.behavior.checkForUpdates !== newConfig.behavior.checkForUpdates) changes.push(`Check for updates: ${newConfig.behavior.checkForUpdates}`);
-  if (oldConfig.behavior.copyOnSelect !== newConfig.behavior.copyOnSelect) changes.push(`Copy on select: ${newConfig.behavior.copyOnSelect}`);
+  if (oldConfig.behavior.checkForUpdates !== newConfig.behavior.checkForUpdates)
+    changes.push(`Check for updates: ${newConfig.behavior.checkForUpdates}`);
+  if (oldConfig.behavior.copyOnSelect !== newConfig.behavior.copyOnSelect)
+    changes.push(`Copy on select: ${newConfig.behavior.copyOnSelect}`);
 
-  if (oldConfig.startup.enabled !== newConfig.startup.enabled) changes.push(`Startup layout: ${newConfig.startup.enabled ? 'enabled' : 'disabled'}`);
-  if (oldConfig.startup.commandDelayMs !== newConfig.startup.commandDelayMs) changes.push(`Command delay: ${oldConfig.startup.commandDelayMs} → ${newConfig.startup.commandDelayMs}ms`);
+  if (oldConfig.startup.enabled !== newConfig.startup.enabled)
+    changes.push(
+      `Startup layout: ${newConfig.startup.enabled ? "enabled" : "disabled"}`,
+    );
+  if (oldConfig.startup.commandDelayMs !== newConfig.startup.commandDelayMs)
+    changes.push(
+      `Command delay: ${oldConfig.startup.commandDelayMs} → ${newConfig.startup.commandDelayMs}ms`,
+    );
 
   const oldCmds = Object.keys(oldConfig.commands);
   const newCmds = Object.keys(newConfig.commands);
@@ -57,18 +91,25 @@ function diffConfigs(oldConfig: AgenticConfig | null, newConfig: AgenticConfig):
   for (const theme of oldThemes) {
     if (!newThemes.includes(theme)) changes.push(`Removed theme: "${theme}"`);
   }
-  if (oldConfig.activeTheme !== newConfig.activeTheme) changes.push(`Active theme: "${oldConfig.activeTheme || '(built-in)'}" → "${newConfig.activeTheme || '(built-in)'}"`);
+  if (oldConfig.activeTheme !== newConfig.activeTheme)
+    changes.push(
+      `Active theme: "${oldConfig.activeTheme || "(built-in)"}" → "${newConfig.activeTheme || "(built-in)"}"`,
+    );
 
-  if (oldConfig.keybindings.length !== newConfig.keybindings.length) changes.push(`Keybindings: ${oldConfig.keybindings.length} → ${newConfig.keybindings.length}`);
+  if (oldConfig.keybindings.length !== newConfig.keybindings.length)
+    changes.push(
+      `Keybindings: ${oldConfig.keybindings.length} → ${newConfig.keybindings.length}`,
+    );
 
-  if (changes.length === 0) changes.push('No visible changes');
+  if (changes.length === 0) changes.push("No visible changes");
   return changes;
 }
 
 function App() {
   const [config, setConfig] = useState<AgenticConfig | null>(null);
+  const [metadata, setMetadata] = useState<any>(null);
   const [savedConfig, setSavedConfig] = useState<AgenticConfig | null>(null);
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState("general");
   const [error, setError] = useState<string | null>(null);
   const [showNewCommandDialog, setShowNewCommandDialog] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(DEFAULT_PREVIEW_WIDTH);
@@ -78,47 +119,56 @@ function App() {
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(0);
 
-  const luaPreview = config ? generateLuaText(config) : '';
+  const luaPreview = config ? generateLuaText(config, metadata) : "";
+
   const activePalette = config ? resolveActivePalette(config) : null;
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragStartX.current = e.clientX;
-    dragStartWidth.current = previewWidth;
-    setIsDragging(true);
-  }, [previewWidth]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      dragStartX.current = e.clientX;
+      dragStartWidth.current = previewWidth;
+      setIsDragging(true);
+    },
+    [previewWidth],
+  );
 
   useEffect(() => {
     if (!isDragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
       const delta = dragStartX.current - e.clientX;
-      const newWidth = Math.min(MAX_PREVIEW_WIDTH, Math.max(MIN_PREVIEW_WIDTH, dragStartWidth.current + delta));
+      const newWidth = Math.min(
+        MAX_PREVIEW_WIDTH,
+        Math.max(MIN_PREVIEW_WIDTH, dragStartWidth.current + delta),
+      );
       setPreviewWidth(newWidth);
     };
 
     const handleMouseUp = () => setIsDragging(false);
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [isDragging]);
 
   useEffect(() => {
-    fetch('/api/settings')
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load settings');
+    fetch("/api/settings")
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load settings");
         return res.json();
       })
-      .then(data => {
-        setConfig(data);
-        setSavedConfig(JSON.parse(JSON.stringify(data)));
+      .then((data) => {
+        const { _metadata, ...configData } = data;
+        setConfig(configData as AgenticConfig);
+        setMetadata(_metadata);
+        setSavedConfig(JSON.parse(JSON.stringify(configData)));
         setError(null);
       })
-      .catch(err => setError(err.message));
+      .catch((err) => setError(err.message));
   }, []);
 
   // Mirror WezTerm's theme selection in the web UI.
@@ -130,7 +180,7 @@ function App() {
   useEffect(() => {
     if (!config) return;
     const mode = deriveUiMode(config);
-    document.documentElement.classList.toggle('dark', mode === 'dark');
+    document.documentElement.classList.toggle("dark", mode === "dark");
     applyPaletteToRoot(resolveActivePalette(config));
   }, [config]);
 
@@ -140,16 +190,16 @@ function App() {
     setLastChanges(changes);
     setShowChanges(true);
 
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(config)
+    fetch("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(config),
     })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to save');
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to save");
         setSavedConfig(JSON.parse(JSON.stringify(config)));
       })
-      .catch(err => setError(err.message));
+      .catch((err) => setError(err.message));
   };
 
   const updateConfig = (updater: (draft: AgenticConfig) => void) => {
@@ -161,22 +211,22 @@ function App() {
 
   const addNewCommand = (name: string) => {
     if (!config) {
-      setError('No config loaded');
+      setError("No config loaded");
       return;
     }
     if (name in config.commands) {
-      setError('Command name already exists');
+      setError("Command name already exists");
       return;
     }
-    updateConfig(c => {
+    updateConfig((c) => {
       c.commands[name] = {
         title: name,
-        program: '',
+        program: "",
         args: [],
-        cwd: '',
+        cwd: "",
         includeInLaunchMenu: true,
         includeHotkey: true,
-        hotkey: '',
+        hotkey: "",
       };
     });
     setShowNewCommandDialog(false);
@@ -189,7 +239,9 @@ function App() {
       {error && (
         <div className="fixed top-4 right-4 bg-destructive/90 text-destructive-foreground px-4 py-2 rounded-lg shadow-lg z-50">
           {error}
-          <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
+          <button onClick={() => setError(null)} className="ml-2 underline">
+            Dismiss
+          </button>
         </div>
       )}
 
@@ -200,64 +252,75 @@ function App() {
         />
       )}
 
-    <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <div className="flex h-screen bg-background text-foreground overflow-hidden font-sans">
+        <Sidebar
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          metadata={metadata}
+        />
+        <div className="flex-1 flex flex-col bg-background overflow-y-auto">
+          <div className="p-8 flex-1 w-full space-y-6">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-semibold capitalize text-foreground">
+                {activeTab} Settings
+              </h2>
+              <button
+                onClick={handleSave}
+                className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors shadow-lg shadow-primary/20"
+              >
+                Save Configuration
+              </button>
+            </div>
 
-      <div className="flex-1 flex flex-col bg-background overflow-y-auto">
-        <div className="p-8 flex-1 w-full space-y-6">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-semibold capitalize text-foreground">{activeTab} Settings</h2>
-            <button
-              onClick={handleSave}
-              className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors shadow-lg shadow-primary/20"
-            >
-              Save Configuration
-            </button>
-          </div>
+            <div className="space-y-6">
+              {activeTab === "general" && (
+                <GeneralSettings config={config} onUpdate={updateConfig} />
+              )}
 
-          <div className="space-y-6">
-            {activeTab === 'general' && (
-              <GeneralSettings config={config} onUpdate={updateConfig} />
-            )}
+              {activeTab === "appearance" && (
+                <AppearanceSettings config={config} onUpdate={updateConfig} />
+              )}
 
-            {activeTab === 'appearance' && (
-              <AppearanceSettings config={config} onUpdate={updateConfig} />
-            )}
+              {activeTab === "themes" && (
+                <ThemesSettings config={config} onUpdate={updateConfig} />
+              )}
 
-            {activeTab === 'themes' && (
-              <ThemesSettings config={config} onUpdate={updateConfig} />
-            )}
+              {activeTab === "behavior" && (
+                <BehaviorSettings config={config} onUpdate={updateConfig} />
+              )}
 
-            {activeTab === 'behavior' && (
-              <BehaviorSettings config={config} onUpdate={updateConfig} />
-            )}
+              {activeTab === "startup" && (
+                <StartupSettings config={config} onUpdate={updateConfig} />
+              )}
 
-            {activeTab === 'startup' && (
-              <StartupSettings config={config} onUpdate={updateConfig} />
-            )}
+              {activeTab === "commands" && (
+                <CommandsSettings
+                  config={config}
+                  onUpdate={updateConfig}
+                  onAddCommand={() => setShowNewCommandDialog(true)}
+                />
+              )}
 
-            {activeTab === 'commands' && (
-              <CommandsSettings
-                config={config}
-                onUpdate={updateConfig}
-                onAddCommand={() => setShowNewCommandDialog(true)}
-              />
-            )}
-
-            {activeTab === 'keybindings' && (
-              <KeybindingsSettings config={config} onUpdate={updateConfig} />
-            )}
+              {activeTab === "keybindings" && (
+                <KeybindingsSettings config={config} onUpdate={updateConfig} />
+              )}
+            </div>
           </div>
         </div>
+
+        <div
+          className={`w-1 cursor-col-resize hover:bg-primary/50 transition-colors flex-shrink-0 ${isDragging ? "bg-primary" : "bg-border"}`}
+          onMouseDown={handleMouseDown}
+        />
+
+        <LuaPreview
+          lua={luaPreview}
+          width={previewWidth}
+          changes={showChanges ? lastChanges : null}
+          onDismissChanges={() => setShowChanges(false)}
+          palette={activePalette}
+        />
       </div>
-
-      <div
-        className={`w-1 cursor-col-resize hover:bg-primary/50 transition-colors flex-shrink-0 ${isDragging ? 'bg-primary' : 'bg-border'}`}
-        onMouseDown={handleMouseDown}
-      />
-
-      <LuaPreview lua={luaPreview} width={previewWidth} changes={showChanges ? lastChanges : null} onDismissChanges={() => setShowChanges(false)} palette={activePalette} />
-    </div>
     </>
   );
 }

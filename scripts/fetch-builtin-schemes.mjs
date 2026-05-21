@@ -2,27 +2,28 @@
 /**
  * Fetch every WezTerm built-in colour scheme from the upstream
  * iTerm2-Color-Schemes repository (which ships the WezTerm-format TOML files
- * WezTerm itself loads from) and emit src/lib/builtinSchemes.ts.
+ * WezTerm itself loads from) and emit shared/builtinSchemes.ts.
  *
  *   node scripts/fetch-builtin-schemes.mjs
  *
  * Idempotent. Re-run after WezTerm adds new schemes or you extend
  * BUILTIN_COLOR_SCHEMES in shared/schema.ts.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parse as parseToml } from 'smol-toml';
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parse as parseToml } from "smol-toml";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..');
+const ROOT = resolve(__dirname, "..");
 
 // ---------- Step 1: read the canonical scheme list from the schema -----------
 function loadSchemeNames() {
-  const src = readFileSync(resolve(ROOT, 'shared/schema.ts'), 'utf8');
+  const src = readFileSync(resolve(ROOT, "shared/schema.ts"), "utf8");
   const m = src.match(/BUILTIN_COLOR_SCHEMES\s*=\s*\[([\s\S]*?)\]\s*as const/);
-  if (!m) throw new Error('Could not find BUILTIN_COLOR_SCHEMES in shared/schema.ts');
-  return [...m[1].matchAll(/'([^']+)'/g)].map((mm) => mm[1]);
+  if (!m)
+    throw new Error("Could not find BUILTIN_COLOR_SCHEMES in shared/schema.ts");
+  return [...m[1].matchAll(/['"]([^'"]+)['"]/g)].map((mm) => mm[1]);
 }
 
 // ---------- Step 2: resolve WezTerm names → upstream filenames ---------------
@@ -33,44 +34,42 @@ function loadSchemeNames() {
 // mbadolato/iTerm2-Color-Schemes/wezterm/. Anything not listed is tried
 // verbatim, then with the "Builtin " prefix stripped.
 const NAME_OVERRIDES = {
-  'Builtin Solarized Dark': 'iTerm2 Solarized Dark',
-  'Builtin Solarized Light': 'iTerm2 Solarized Light',
-  'ayu Dark': 'Ayu',
-  'ayu Light': 'Ayu Light',
-  'ayu Mirage': 'Ayu Mirage',
-  'Tokyo Night': 'TokyoNight Night',
-  'One Dark': 'Atom One Dark',
-  'One Light': 'Atom One Light',
-  Monokai: 'Monokai Classic',
-  Kanagawa: 'Kanagawa Wave',
-  'Everforest Dark': 'Everforest Dark Hard',
-  'Everforest Light': 'Everforest Light Med',
-  'GitHub Light': 'GitHub Light Default',
-  'Iterm Dark': 'iTerm2 Dark Background',
-  'Iterm Light': 'iTerm2 Light Background',
-  'Material Theme': 'Material',
-  'PaulMillr': 'Paul Millr',
-  'SoftServer': 'Soft Server',
-  SpaceGray: 'Spacegray',
-  'SpaceGray Eighties': 'Spacegray Eighties',
-  'SpaceGray Eighties Dull': 'Spacegray Eighties Dull',
-  'Tango Dark': 'iTerm2 Tango Dark',
-  'Tango Light': 'iTerm2 Tango Light',
-  Thelovelace: 'Lovelace',
-  ToyChest: 'Toy Chest',
-  VibrantInk: 'Vibrant Ink',
-  WarmNeon: 'Warm Neon',
-  WildCherry: 'Wild Cherry',
-  zenbones: 'Zenbones',
-  zenburn: 'Zenburn',
-  // Schemes WezTerm ships that have no direct upstream equivalent — leave
-  // commented for future investigation. They fall back to the light/dark
-  // heuristic so the UI still works:
-  //   Campbell, Debian, Falcon, Foxnightly, Gotham, Hyper, Invisibone,
-  //   lowcontrast, Material Theme Palenight, Material Theme Lighter,
-  //   Noctis Winter, Panda, PaperColor Dark, PaperColor Light,
-  //   Remedy Dark, Shel, Sublime, Tender, Terminix Dark,
-  //   Visual Studio Dark, Visual Studio Light, Velvet
+  "Builtin Solarized Dark": "iTerm2 Solarized Dark",
+  "Builtin Solarized Light": "iTerm2 Solarized Light",
+  "ayu Dark": "Ayu",
+  "ayu Light": "Ayu Light",
+  "ayu Mirage": "Ayu Mirage",
+  "Tokyo Night": "TokyoNight Night",
+  "One Dark": "Atom One Dark",
+  "One Light": "Atom One Light",
+  "Monokai Pro (Gogh)": "Monokai Pro",
+  "Monokai Pro Machine (Gogh)": "Monokai Pro Machine",
+  "Monokai Pro Octagon (Gogh)": "Monokai Pro Octagon",
+  "Monokai Pro Ristretto (Gogh)": "Monokai Pro Ristretto",
+  "Monokai Pro Spectrum (Gogh)": "Monokai Pro Spectrum",
+  Monokai: "Monokai Classic",
+
+  Kanagawa: "Kanagawa Wave",
+  "Everforest Dark": "Everforest Dark Hard",
+  "Everforest Light": "Everforest Light Med",
+  "GitHub Light": "GitHub Light Default",
+  "Iterm Dark": "iTerm2 Dark Background",
+  "Iterm Light": "iTerm2 Light Background",
+  "Material Theme": "Material",
+  PaulMillr: "Paul Millr",
+  SoftServer: "Soft Server",
+  SpaceGray: "Spacegray",
+  "SpaceGray Eighties": "Spacegray Eighties",
+  "SpaceGray Eighties Dull": "Spacegray Eighties Dull",
+  "Tango Dark": "iTerm2 Tango Dark",
+  "Tango Light": "iTerm2 Tango Light",
+  Thelovelace: "Lovelace",
+  ToyChest: "Toy Chest",
+  VibrantInk: "Vibrant Ink",
+  WarmNeon: "Warm Neon",
+  WildCherry: "Wild Cherry",
+  zenbones: "Zenbones",
+  zenburn: "Zenburn",
 };
 
 function candidatesFor(name) {
@@ -78,8 +77,8 @@ function candidatesFor(name) {
   if (explicit) return [explicit, name];
   return [
     name,
-    name.replace(/^Builtin\s+/, ''),
-    name.replace(/^Builtin\s+/, '') + ' - Patched',
+    name.replace(/^Builtin\s+/, ""),
+    name.replace(/^Builtin\s+/, "") + " - Patched",
   ];
 }
 
@@ -102,7 +101,7 @@ function tomlToPalette(toml) {
   const data = parseToml(toml);
   const c = data.colors ?? data;
   if (!c.background || !c.foreground || !c.ansi || !c.brights) {
-    throw new Error('TOML missing required colour fields');
+    throw new Error("TOML missing required colour fields");
   }
   return {
     foreground: c.foreground,
@@ -123,12 +122,16 @@ function tomlToPalette(toml) {
 
 // ---------- Step 4: serialise back out as a TS module ------------------------
 function paletteToTs(name, p) {
-  const arr = (xs) => '[' + xs.map((x) => JSON.stringify(x)).join(', ') + ']';
+  const arr = (xs) => "[" + xs.map((x) => JSON.stringify(x)).join(", ") + "]";
   const indexedEntries = Object.entries(p.indexed);
   const indexedStr =
     indexedEntries.length === 0
-      ? '{}'
-      : '{ ' + indexedEntries.map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`).join(', ') + ' }';
+      ? "{}"
+      : "{ " +
+        indexedEntries
+          .map(([k, v]) => `${JSON.stringify(k)}: ${JSON.stringify(v)}`)
+          .join(", ") +
+        " }";
   return `  ${JSON.stringify(name)}: {
     foreground: ${JSON.stringify(p.foreground)},
     background: ${JSON.stringify(p.background)},
@@ -188,7 +191,7 @@ async function main() {
 
   // Emit the TS file (ordered by scheme name for diff stability)
   const sortedNames = Object.keys(palettes).sort();
-  const body = sortedNames.map((n) => paletteToTs(n, palettes[n])).join(',\n');
+  const body = sortedNames.map((n) => paletteToTs(n, palettes[n])).join(",\n");
   const out = `// AUTO-GENERATED by scripts/fetch-builtin-schemes.mjs — do not edit by hand.
 // Re-run \`node scripts/fetch-builtin-schemes.mjs\` to refresh.
 // Source: https://github.com/mbadolato/iTerm2-Color-Schemes/tree/master/wezterm
@@ -196,21 +199,25 @@ async function main() {
 // Maps WezTerm built-in colour scheme names → ColorPalette so the web UI can
 // restyle itself to match the terminal theme. Schemes not listed here fall
 // back to the light/dark heuristic in src/lib/themeMode.ts.
-import type { ColorPalette } from '../../shared/schema';
+import type { ColorPalette } from './schema';
 
 export const BUILTIN_SCHEME_PALETTES: Record<string, ColorPalette> = {
 ${body}
 };
 `;
-  const dest = resolve(ROOT, 'src/lib/builtinSchemes.ts');
+  const dest = resolve(ROOT, "shared/builtinSchemes.ts");
   mkdirSync(dirname(dest), { recursive: true });
-  writeFileSync(dest, out, 'utf8');
-  console.log(`\nWrote ${sortedNames.length}/${names.length} schemes → src/lib/builtinSchemes.ts`);
+  writeFileSync(dest, out, "utf8");
+  console.log(
+    `\nWrote ${sortedNames.length}/${names.length} schemes → shared/builtinSchemes.ts`,
+  );
 
   if (failures.length > 0) {
     console.log(`\n${failures.length} schemes could not be resolved:`);
     for (const f of failures) console.log(`  ✗ ${f}`);
-    console.log('\nThese will fall back to the light/dark heuristic in themeMode.ts.');
+    console.log(
+      "\nThese will fall back to the light/dark heuristic in themeMode.ts.",
+    );
   }
 }
 
