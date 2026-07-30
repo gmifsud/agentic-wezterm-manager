@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import type { AgenticConfig } from "../shared/schema";
 import { generateLuaText } from "../shared/lua-generator";
 import { deriveUiMode } from "./lib/themeMode";
@@ -119,9 +119,13 @@ function App() {
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(0);
 
-  const luaPreview = config ? generateLuaText(config, metadata) : "";
+  const luaPreview = useMemo(() => {
+    return config ? generateLuaText(config, metadata) : "";
+  }, [config, metadata]);
 
-  const activePalette = config ? resolveActivePalette(config) : null;
+  const activePalette = useMemo(() => {
+    return config ? resolveActivePalette(config) : null;
+  }, [config]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -136,13 +140,18 @@ function App() {
   useEffect(() => {
     if (!isDragging) return;
 
+    let animationFrameId: number;
+
     const handleMouseMove = (e: MouseEvent) => {
-      const delta = dragStartX.current - e.clientX;
-      const newWidth = Math.min(
-        MAX_PREVIEW_WIDTH,
-        Math.max(MIN_PREVIEW_WIDTH, dragStartWidth.current + delta),
-      );
-      setPreviewWidth(newWidth);
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => {
+        const delta = dragStartX.current - e.clientX;
+        const newWidth = Math.min(
+          MAX_PREVIEW_WIDTH,
+          Math.max(MIN_PREVIEW_WIDTH, dragStartWidth.current + delta),
+        );
+        setPreviewWidth(newWidth);
+      });
     };
 
     const handleMouseUp = () => setIsDragging(false);
@@ -150,6 +159,7 @@ function App() {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };

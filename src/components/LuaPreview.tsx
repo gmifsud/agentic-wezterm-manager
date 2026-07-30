@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { ColorPalette } from '../../shared/schema';
 
 interface LuaPreviewProps {
@@ -86,7 +86,7 @@ function colorsFromPalette(p: ColorPalette): SyntaxColors {
   };
 }
 
-export function LuaPreview({ lua, width, changes, onDismissChanges, palette }: LuaPreviewProps) {
+export const LuaPreview = React.memo(function LuaPreview({ lua, width, changes, onDismissChanges, palette }: LuaPreviewProps) {
   const [copied, setCopied] = useState(false);
 
   const colors = useMemo<SyntaxColors>(
@@ -101,7 +101,13 @@ export function LuaPreview({ lua, width, changes, onDismissChanges, palette }: L
     });
   };
 
-  const lines = lua.split('\n');
+  const highlightedHtml = useMemo(() => {
+    return lua.split('\n').map((line, i) => {
+      const num = `<span class="inline-block w-10 text-right pr-4 select-none flex-shrink-0" style="color:${colors.muted};opacity:0.7">${i + 1}</span>`;
+      const content = `<span class="flex-1 whitespace-pre" style="color:${colors.fg}">${highlightLua(line, colors)}</span>`;
+      return `<div class="flex -mx-4 px-4" style="color:${colors.fg}">${num}${content}</div>`;
+    }).join('');
+  }, [lua, colors]);
 
   return (
     <div
@@ -169,36 +175,23 @@ export function LuaPreview({ lua, width, changes, onDismissChanges, palette }: L
       )}
 
       {/* Code content */}
-      <div className="flex-1 overflow-auto" style={{ background: colors.bg }}>
+      <div 
+        className="flex-1 overflow-auto" 
+        style={{ 
+          background: colors.bg,
+          '--hover-bg': colors.hoverBg
+        } as React.CSSProperties}
+      >
         <div className="p-4">
-          <pre className="text-xs font-mono leading-relaxed">
-            {lines.map((line, i) => (
-              <div
-                key={i}
-                className="flex -mx-4 px-4 transition-colors"
-                style={{ color: colors.fg }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = colors.hoverBg)}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-              >
-                <span
-                  className="inline-block w-10 text-right pr-4 select-none flex-shrink-0"
-                  style={{ color: colors.muted, opacity: 0.7 }}
-                >
-                  {i + 1}
-                </span>
-                <span
-                  className="flex-1 whitespace-pre"
-                  style={{ color: colors.fg }}
-                  dangerouslySetInnerHTML={{ __html: highlightLua(line, colors) }}
-                />
-              </div>
-            ))}
-          </pre>
+          <pre 
+            className="text-xs font-mono leading-relaxed pointer-events-none"
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
         </div>
       </div>
     </div>
   );
-}
+});
 
 function highlightLua(line: string, c: SyntaxColors): string {
   const trimmed = line.trimStart();

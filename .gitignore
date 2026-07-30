@@ -86,3 +86,10 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+.agents/skills/
+.claude/skills/
+.codex/skills/
+.kilo/
+dist/
+dist-server/
+release/
