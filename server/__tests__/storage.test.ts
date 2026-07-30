@@ -209,6 +209,74 @@ describe("generateLuaText", () => {
     expect(lua).toContain("['dev server'] = {");
   });
 
+  describe("startup handler", () => {
+    const lua = generateLuaText(minimalConfig as any);
+
+    it("should emit a gui-startup handler and call it from apply", () => {
+      expect(lua).toContain("function agentic.setup(config, wezterm, mux)");
+      expect(lua).toContain("wezterm.on('gui-startup', function(cmd)");
+      expect(lua).toContain("agentic.setup(config, wezterm, mux)");
+    });
+
+    it("should guard against registering the handler twice", () => {
+      expect(lua).toContain("if agentic._startup_registered then");
+      expect(lua).toContain("agentic._startup_registered = true");
+    });
+
+    it("should spawn a plain window when startup is disabled", () => {
+      expect(lua).toContain("if not startup.enabled then");
+      expect(lua).toContain("mux.spawn_window(cmd or {})");
+    });
+
+    it("should spawn the window from the left pane shell in projectDir", () => {
+      expect(lua).toContain(
+        "local tab, main_pane, window = mux.spawn_window(spawn_opts(layout.leftCommand))",
+      );
+      expect(lua).toContain("args = agentic.startup_args(pane),");
+      expect(lua).toContain("cwd = data.projectDir,");
+    });
+
+    it("should split a quad layout with per-pane shells", () => {
+      expect(lua).toContain("if layout.type == 'quad' then");
+      expect(lua).toContain("local right_top = main_pane:split {");
+      expect(lua).toContain("local left_bottom = main_pane:split {");
+      expect(lua).toContain("local right_bottom = right_top:split {");
+      expect(lua).toContain("direction = 'Right',");
+      expect(lua).toContain("direction = 'Bottom',");
+      expect(lua).toContain("size = 0.5,");
+      expect(lua).toContain(
+        "args = agentic.startup_args(layout.rightBottomCommand),",
+      );
+    });
+
+    it("should type pane commands with send_text after a staggered delay", () => {
+      expect(lua).toContain("pane:send_text(command .. '\\r')");
+      expect(lua).toContain("wezterm.time.call_after(delay_ms / 1000,");
+      expect(lua).toContain(
+        "send_command(entry.pane, entry.command, base_delay + (offset + index - 1) * stagger)",
+      );
+      expect(lua).toContain("local base_delay = startup.commandDelayMs or 500");
+    });
+
+    it("should spawn extra tabs with their title and command", () => {
+      expect(lua).toContain(
+        "for _, tab_config in ipairs(startup.extraTabs or {}) do",
+      );
+      expect(lua).toContain(
+        "local extra_tab, extra_pane = window:spawn_tab(spawn_opts(tab_config))",
+      );
+      expect(lua).toContain("extra_tab:set_title(tab_config.title)");
+      expect(lua).toContain("send_all(tab_entries, #entries)");
+    });
+
+    it("should title the main tab and maximize when configured", () => {
+      expect(lua).toContain("tab:set_title(data.workspaceName)");
+      expect(lua).toContain("tab:activate()");
+      expect(lua).toContain("data.appearance.window.startMaximized then");
+      expect(lua).toContain("gui_window:maximize()");
+    });
+  });
+
   it("should include metadata when provided", () => {
     const metadata = {
       environment: "dev",

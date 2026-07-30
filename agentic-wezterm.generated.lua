@@ -7,11 +7,8 @@ local agentic = {
 
   metadata = {
     isPackaged = false,
-    configDir = 'C:\\Repos\\CLI\\agentic-wezterm-manager',
-    configFile = 'C:\\Repos\\CLI\\agentic-wezterm-manager\\agentic-wezterm.config.json',
-    luaOutputFile = 'C:\\Repos\\CLI\\agentic-wezterm-manager\\agentic-wezterm.generated.lua',
-    luaHomeFile = null,
-    environment = 'dev'
+    environment = 'dev',
+    luaOutputFile = 'C:\\Repos\\CLI\\agentic-wezterm-manager\\agentic-wezterm.generated.lua'
   },
 
   appearance = {
@@ -134,8 +131,8 @@ agentic.startup_delay = agentic.startup.commandDelayMs or 500
 
 -- Resolve the spawn-args for a given shellType/customShell pair.
 -- Pass 'inherit' (or nil/'') to fall back to the global shell.
--- Use this from your wezterm.lua when spawning the quad layout panes,
--- e.g.  local args = agentic.resolve_shell(pane.shellType, pane.customShell)
+-- Used by agentic.setup when spawning the startup panes, and available to your
+-- own wezterm.lua, e.g.  agentic.resolve_shell(pane.shellType, pane.customShell)
 function agentic.resolve_shell(shellType, customShell)
   if not shellType or shellType == '' or shellType == 'inherit' then
     return agentic.shell_args
@@ -214,6 +211,114 @@ local function parse_hotkey(hotkey)
     key = key,
     mods = table.concat(mods, '|'),
   }
+end
+
+-- Registers the 'gui-startup' handler that materialises startup.layout and
+-- startup.extraTabs. Commands are typed with send_text rather than passed as
+-- spawn args because each pane command is a multiline script, not a program.
+-- Called by agentic.apply, so a plain apply() is enough to get the layout.
+function agentic.setup(config, wezterm, mux)
+  if agentic._startup_registered then
+    return config
+  end
+  agentic._startup_registered = true
+
+  mux = mux or (wezterm and wezterm.mux)
+  if not wezterm or not mux then
+    return config
+  end
+
+  local data = agentic
+  local startup = data.startup or {}
+  local base_delay = startup.commandDelayMs or 500
+  -- Panes are staggered so four shells don't race to initialise at once.
+  local stagger = 300
+
+  local function spawn_opts(pane)
+    return {
+      args = agentic.startup_args(pane),
+      cwd = data.projectDir,
+    }
+  end
+
+  local function send_command(pane, command, delay_ms)
+    if not pane or not command or command == '' then
+      return
+    end
+    wezterm.time.call_after(delay_ms / 1000, function()
+      pane:send_text(command .. '\r')
+    end)
+  end
+
+  local function send_all(entries, offset)
+    for index, entry in ipairs(entries) do
+      send_command(entry.pane, entry.command, base_delay + (offset + index - 1) * stagger)
+    end
+  end
+
+  wezterm.on('gui-startup', function(cmd)
+    if not startup.enabled then
+      mux.spawn_window(cmd or {})
+      return
+    end
+
+    local layout = startup.layout or {}
+    local tab, main_pane, window = mux.spawn_window(spawn_opts(layout.leftCommand))
+    local entries = {
+      { pane = main_pane, command = layout.leftCommand and layout.leftCommand.command },
+    }
+
+    if layout.type == 'quad' then
+      local right_top = main_pane:split {
+        direction = 'Right',
+        size = 0.5,
+        args = agentic.startup_args(layout.rightTopCommand),
+        cwd = data.projectDir,
+      }
+      local left_bottom = main_pane:split {
+        direction = 'Bottom',
+        size = 0.5,
+        args = agentic.startup_args(layout.leftBottomCommand),
+        cwd = data.projectDir,
+      }
+      local right_bottom = right_top:split {
+        direction = 'Bottom',
+        size = 0.5,
+        args = agentic.startup_args(layout.rightBottomCommand),
+        cwd = data.projectDir,
+      }
+
+      table.insert(entries, { pane = right_top, command = layout.rightTopCommand and layout.rightTopCommand.command })
+      table.insert(entries, { pane = left_bottom, command = layout.leftBottomCommand and layout.leftBottomCommand.command })
+      table.insert(entries, { pane = right_bottom, command = layout.rightBottomCommand and layout.rightBottomCommand.command })
+    end
+
+    send_all(entries, 0)
+
+    local tab_entries = {}
+    for _, tab_config in ipairs(startup.extraTabs or {}) do
+      local extra_tab, extra_pane = window:spawn_tab(spawn_opts(tab_config))
+      if tab_config.title and tab_config.title ~= '' then
+        extra_tab:set_title(tab_config.title)
+      end
+      table.insert(tab_entries, { pane = extra_pane, command = tab_config.command })
+    end
+    send_all(tab_entries, #entries)
+
+    if data.workspaceName and data.workspaceName ~= '' then
+      tab:set_title(data.workspaceName)
+    end
+    tab:activate()
+
+    if data.appearance and data.appearance.window and data.appearance.window.startMaximized then
+      local gui_window = window:gui_window()
+      if gui_window then
+        gui_window:maximize()
+      end
+    end
+  end)
+
+  return config
 end
 
 function agentic.apply(config, wezterm, mux)
@@ -421,6 +526,8 @@ function agentic.apply(config, wezterm, mux)
   if data.metadata and data.metadata.environment then
     wezterm.log_info("Agentic WezTerm Manager: Loaded " .. data.metadata.environment .. " config from " .. (data.metadata.luaOutputFile or "unknown path"))
   end
+
+  agentic.setup(config, wezterm, mux)
 
   return config
 end
