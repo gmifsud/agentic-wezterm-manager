@@ -31,27 +31,22 @@ Ensure you have Node.js and `npm` installed on your system.
 
 ## 🔌 Connecting to WezTerm
 
-To actually load these settings into WezTerm, you need to import the generated Lua file into your main `wezterm.lua` configuration file (which is usually located in `~/.wezterm.lua` or `$HOME/.config/wezterm/wezterm.lua`).
+To actually load these settings into WezTerm, load the generated Lua file from your main `wezterm.lua` (usually `~/.wezterm.lua` or `$HOME/.config/wezterm/wezterm.lua`).
 
 1. Locate the absolute path to your `agentic-wezterm.generated.lua` file. (e.g., `C:/Repos/CLI/agentic-wezterm-manager/agentic-wezterm.generated.lua`).
-2. Add the following logic to your `wezterm.lua` to pull in the generated settings:
+2. `dofile` it and hand the config builder to `agentic.apply`. That's the whole integration:
 
 ```lua
 local wezterm = require 'wezterm'
 local config = wezterm.config_builder()
 
 -- Safely attempt to load the generated config
-local status, generated_config = pcall(dofile, "C:/Repos/CLI/agentic-wezterm-manager/agentic-wezterm.generated.lua")
+local status, agentic = pcall(dofile, "C:/Repos/CLI/agentic-wezterm-manager/agentic-wezterm.generated.lua")
 
-if status and generated_config then
-  -- Example of how to map a generated setting to the actual config
-  if generated_config.appearance then
-    config.color_scheme = generated_config.appearance.colorScheme
-    config.font_size = generated_config.appearance.font.size
-  end
-  
-  -- Add more mappings based on what you configured in the Web UI
-  -- ...
+if status and agentic then
+  -- Maps appearance/behavior/keybindings/commands AND registers the
+  -- startup layout (quad panes + extra tabs) via 'gui-startup'.
+  agentic.apply(config, wezterm, wezterm.mux)
 else
   wezterm.log_info("Agentic WezTerm config not found or failed to load. Using defaults.")
 end
@@ -59,7 +54,21 @@ end
 return config
 ```
 
-> **Note:** The `agentic-wezterm.generated.lua` file returns a Lua dictionary containing all your settings. You'll need to map the returned properties onto the actual `wezterm.config_builder()` object in your primary config file.
+> **Use `dofile`, not `require`.** The generated filename contains dots, so `require 'agentic-wezterm.generated'` resolves to a nonexistent `agentic-wezterm/generated.lua` path and fails.
+
+> **Note:** `agentic.apply` mutates and returns the config builder, so you do not need to map individual properties yourself. The raw settings table is still exposed (e.g. `agentic.appearance.colorScheme`) if you want to read values in your own hand-written Lua.
+
+### Startup layout
+
+`agentic.apply` calls `agentic.setup`, which registers a `wezterm.on('gui-startup', ...)` handler. On the next WezTerm launch it:
+
+* Spawns the window in `projectDir` using the **Left** pane's shell.
+* For `layout.type = "quad"`, splits Right (50%), then Bottom on each column, spawning every pane with its own resolved shell (`pwsh` / `wsl` / `gitbash` / `inherit` / custom). Any other layout type falls back to a single pane.
+* Types each pane's command with `send_text` after `commandDelayMs`, staggering panes ~300ms apart. Commands are typed rather than passed as spawn args so multiline scripts work.
+* Spawns each **extra tab**, sets its title, and types its command the same way.
+* Titles the first tab with the workspace name and maximizes the window when **Start maximized** is set.
+
+Set **Startup → Enabled** off to opt out; WezTerm then opens a plain default window. If you prefer to call it yourself, `agentic.setup(config, wezterm, wezterm.mux)` is safe to call directly — registration is guarded, so calling both it and `apply` will not spawn the layout twice.
 
 ## 📦 Packaging as a Standalone `.exe`
 
