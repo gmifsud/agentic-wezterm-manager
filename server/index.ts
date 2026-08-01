@@ -6,6 +6,25 @@ import { fileURLToPath } from 'node:url';
 import { exec } from 'node:child_process';
 import { routes } from './routes';
 import { getMetadata } from './storage';
+import { BUNDLED_SCRIPTS } from './bundled-scripts';
+
+// A packaged exe launched from Explorer closes its console the instant it
+// throws, so a startup failure reaches the user as "it does not open" with
+// nothing to go on. Leave the reason on disk next to the exe.
+process.on('uncaughtException', (err) => {
+  const logFile = path.join(
+    path.dirname(process.execPath),
+    'agentic-wezterm-manager.error.log',
+  );
+  console.error(err);
+  try {
+    fs.writeFileSync(logFile, `${new Date().toISOString()}\n${err.stack}\n`);
+    console.error(`Wrote ${logFile}`);
+  } catch {
+    // Nothing further to do — the stack is already on stderr.
+  }
+  process.exit(1);
+});
 
 // import.meta.url is real under tsx (ESM) and substituted from __filename by
 // scripts/build-server.mjs in the CJS bundle.
@@ -43,16 +62,17 @@ function deployBundledScripts(): void {
   if (!isPackaged) return;
   const source = path.resolve(__thisDir, '../scripts');
   const target = path.join(configDir, 'scripts');
-  try {
-    fs.mkdirSync(target, { recursive: true });
-    for (const name of fs.readdirSync(source)) {
+  for (const name of BUNDLED_SCRIPTS) {
+    // Per script, so one unwritable target does not strand the rest.
+    try {
+      fs.mkdirSync(target, { recursive: true });
       fs.writeFileSync(
         path.join(target, name),
         fs.readFileSync(path.join(source, name)),
       );
+    } catch (err) {
+      console.warn(`Could not unpack scripts/${name}:`, err);
     }
-  } catch (err) {
-    console.warn('Could not deploy bundled scripts:', err);
   }
 }
 
