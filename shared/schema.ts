@@ -87,6 +87,9 @@ const defaultBrightColors = [
 // A startup pane: text command + optional per-pane shell override.
 // Accepts a bare string (legacy format) and rewrites it on the fly so existing
 // agentic-wezterm.config.json files keep loading without migration.
+// `command` may contain the {managerDir} placeholder, expanded at WezTerm load
+// time to the directory holding the generated Lua, so commands can reference
+// repo assets (e.g. scripts/) without storing an absolute path here.
 export const PANE_SHELL_TYPES = [
   "inherit",
   "pwsh",
