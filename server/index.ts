@@ -5,16 +5,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { exec } from 'node:child_process';
 import { routes } from './routes';
+import { getMetadata } from './storage';
 
-// Resolve "this file's directory" in both runtime modes:
-//   - dev (tsx, ESM source):     __dirname is undefined, use import.meta.url
-//   - bundled (esbuild → CJS):   esbuild keeps the CJS-native __dirname global,
-//                                 and import.meta is empty in that format
-declare const __dirname: string | undefined;
-const __thisDir =
-  typeof __dirname === 'string'
-    ? __dirname
-    : path.dirname(fileURLToPath(import.meta.url));
+// import.meta.url is real under tsx (ESM) and substituted from __filename by
+// scripts/build-server.mjs in the CJS bundle.
+const __thisDir = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 const DEFAULT_PORT = Number(process.env.PORT) || 3001;
@@ -38,6 +33,30 @@ function findDistDir(): string {
 }
 
 const distDir = findDistDir();
+
+// pkg exposes assets through a virtual snapshot filesystem that only this
+// process can read, but scripts/ has to be reachable by WezTerm and PowerShell.
+// Copy it next to the exe, which is where {managerDir} resolves to in packaged
+// installs. In dev the real scripts/ is already on disk.
+function deployBundledScripts(): void {
+  const { isPackaged, configDir } = getMetadata();
+  if (!isPackaged) return;
+  const source = path.resolve(__thisDir, '../scripts');
+  const target = path.join(configDir, 'scripts');
+  try {
+    fs.mkdirSync(target, { recursive: true });
+    for (const name of fs.readdirSync(source)) {
+      fs.writeFileSync(
+        path.join(target, name),
+        fs.readFileSync(path.join(source, name)),
+      );
+    }
+  } catch (err) {
+    console.warn('Could not deploy bundled scripts:', err);
+  }
+}
+
+deployBundledScripts();
 
 app.use(express.static(distDir));
 // SPA fallback: any non-/api path returns index.html

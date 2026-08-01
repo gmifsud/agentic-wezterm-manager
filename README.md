@@ -92,6 +92,8 @@ npm run package
 
 Output: `release/agentic-wezterm-manager.exe` (≈85 MB). Double-click it and the web UI opens at `http://localhost:3001` (or the next free port). `agentic-wezterm.config.json` and `agentic-wezterm.generated.lua` are written next to the `.exe`.
 
+`scripts/` is embedded in the executable and unpacked next to it on startup, because pkg's snapshot filesystem is only visible to the process itself — WezTerm and PowerShell cannot read it. That keeps `{managerDir}` resolving to a real directory in packaged installs.
+
 Useful env vars:
 - `PORT` — preferred port (default `3001`, auto-increments if busy)
 - `NO_OPEN=1` — skip the browser auto-open

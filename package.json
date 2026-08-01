@@ -8,7 +8,7 @@
     "dev": "concurrently \"npm run server\" \"vite\"",
     "server": "tsx watch server/index.ts",
     "build": "tsc -b && vite build",
-    "build:server": "esbuild server/index.ts --bundle --platform=node --target=node20 --format=cjs --outfile=dist-server/index.cjs",
+    "build:server": "node scripts/build-server.mjs",
     "build:all": "npm run build && npm run build:server",
     "rebuild-package": "if exist dist rmdir /s /q dist && if exist dist-server rmdir /s /q dist-server && npm run package",
     "start": "node dist-server/index.cjs",
@@ -21,15 +21,14 @@
   },
   "pkg": {
     "assets": [
-      "dist/**/*"
+      "dist/**/*",
+      "scripts/Start-ObsidianProfiler.ps1"
     ],
     "targets": [
       "node20-win-x64"
     ]
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.2.2",
-    "concurrently": "^9.2.1",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "react": "^19.2.4",
@@ -38,6 +37,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@tailwindcss/vite": "^4.2.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^24.12.2",
@@ -47,6 +47,7 @@
     "@vitest/ui": "^4.1.4",
     "@yao-pkg/pkg": "^6.19.0",
     "autoprefixer": "^10.4.27",
+    "concurrently": "^9.2.1",
     "esbuild": "^0.28.0",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.0.1",
