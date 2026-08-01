@@ -13,7 +13,7 @@
     "clean": "node -e \"const fs=require('fs');for(const d of ['dist','dist-server'])fs.rmSync(d,{recursive:true,force:true})\"",
     "rebuild-package": "npm run clean && npm run package",
     "start": "node dist-server/index.cjs",
-    "package": "npm run build:all && pkg . --out-path release",
+    "package": "npm run build:all && node scripts/check-server-bundle.mjs && pkg . --out-path release",
     "update:schemes": "node scripts/fetch-builtin-schemes.mjs",
     "lint": "eslint .",
     "preview": "vite preview",

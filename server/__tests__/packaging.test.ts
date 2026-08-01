@@ -1,14 +1,16 @@
 // @vitest-environment node
 // esbuild refuses to load under jsdom, whose TextEncoder is not a real Uint8Array.
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   IMPORT_META_URL_ID,
   IMPORT_META_URL_BANNER,
   serverBuildOptions,
-} from "../../scripts/build-server.mjs";
+} from "../../scripts/server-build-config.mjs";
 import { BUNDLED_SCRIPTS } from "../bundled-scripts";
 
 // Under pkg the entry really does live on a drive-lettered path.
@@ -59,6 +61,42 @@ describe("server bundle import.meta.url substitution", () => {
   it("should reject a raw Windows path, proving the round-trip is load-bearing", () => {
     expect(() => fileURLToPath(WIN_FILENAME, { windows: true })).toThrow();
   });
+});
+
+describe("server build script", () => {
+  const repoRoot = fileURLToPath(new URL("../../", import.meta.url));
+  const script = path.join(repoRoot, "scripts", "build-server.mjs");
+
+  it("should not gate the build behind a main-module check", () => {
+    // argv[1] and import.meta.url disagree whenever the invocation path is
+    // spelled differently from the loader's canonical one (junction, subst
+    // drive, symlink), and the build would then be skipped with no output and
+    // a zero exit code.
+    const code = readFileSync(script, "utf-8").replace(/^\s*\/\/.*$/gm, "");
+    expect(code).not.toMatch(/process\.argv\[1\][\s\S]{0,120}import\.meta\.url/);
+  });
+
+  it("should build the bundle and report its size", () => {
+    const result = spawnSync(process.execPath, [script], {
+      cwd: repoRoot,
+      encoding: "utf-8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toMatch(/Built dist-server[\\/]index\.cjs \(\d+ KB\)/);
+    expect(
+      statSync(path.join(repoRoot, "dist-server", "index.cjs")).size,
+    ).toBeGreaterThan(100 * 1024);
+  }, 60_000);
+
+  it("should exit non-zero and explain itself when the build cannot run", () => {
+    // Run from elsewhere so the relative entry point cannot resolve.
+    const result = spawnSync(process.execPath, [script], {
+      cwd: os.tmpdir(),
+      encoding: "utf-8",
+    });
+    expect(result.status).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toContain("Failed to build");
+  }, 60_000);
 });
 
 describe("bundled script assets", () => {
