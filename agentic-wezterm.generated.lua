@@ -7,8 +7,11 @@ local agentic = {
 
   metadata = {
     isPackaged = false,
-    environment = 'dev',
-    luaOutputFile = 'C:\\Repos\\CLI\\agentic-wezterm-manager\\agentic-wezterm.generated.lua'
+    configDir = 'C:\\Repos\\CLI\\agentic-wezterm-manager',
+    configFile = 'C:\\Repos\\CLI\\agentic-wezterm-manager\\agentic-wezterm.config.json',
+    luaOutputFile = 'C:\\Repos\\CLI\\agentic-wezterm-manager\\agentic-wezterm.generated.lua',
+    luaHomeFile = null,
+    environment = 'dev'
   },
 
   appearance = {
