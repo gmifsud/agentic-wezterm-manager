@@ -48,7 +48,7 @@
     "layout": {
       "type": "quad",
       "leftCommand": {
-        "command": "sleep 2000\nobsidian dev:console on",
+        "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"C:\\Repos\\CLI\\agentic-wezterm-manager\\scripts\\Start-ObsidianProfiler.ps1\"",
         "shellType": "inherit",
         "customShell": ""
       },

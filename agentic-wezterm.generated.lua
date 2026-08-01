@@ -56,7 +56,7 @@ local agentic = {
     commandDelayMs = 500,
     layout = {
       type = 'quad',
-      leftCommand = { command = 'sleep 2000\nobsidian dev:console on', shellType = 'inherit', customShell = '' },
+      leftCommand = { command = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "C:\\Repos\\CLI\\agentic-wezterm-manager\\scripts\\Start-ObsidianProfiler.ps1"', shellType = 'inherit', customShell = '' },
       rightTopCommand = { command = 'sleep 2000\necho "Booting openclaw ..."\n\nopenclaw logs --follow', shellType = 'wsl', customShell = '' },
       leftBottomCommand = { command = 'sleep 2000\necho "Running Pieces"\npieces', shellType = 'inherit', customShell = '' },
       rightBottomCommand = { command = 'sleep 2000\ngemini', shellType = 'wsl', customShell = '' },
