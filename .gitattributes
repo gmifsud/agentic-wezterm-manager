@@ -1,0 +1,9 @@
+# Every text file committed so far stores LF, so keep normalising to LF in the
+# repository and check out native endings — a Windows working copy gets CRLF
+# without any core.autocrlf configuration, and without rewriting history.
+* text=auto
+
+# Windows-only entry points, CRLF in the working tree on every platform.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
