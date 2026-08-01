@@ -56,7 +56,7 @@ local agentic = {
     commandDelayMs = 500,
     layout = {
       type = 'quad',
-      leftCommand = { command = 'sleep 2000\nobsidian dev:console on', shellType = 'inherit', customShell = '' },
+      leftCommand = { command = 'pwsh -NoProfile -ExecutionPolicy Bypass -File "{managerDir}\\scripts\\Start-ObsidianProfiler.ps1"', shellType = 'inherit', customShell = '' },
       rightTopCommand = { command = 'sleep 2000\necho "Booting openclaw ..."\n\nopenclaw logs --follow', shellType = 'wsl', customShell = '' },
       leftBottomCommand = { command = 'sleep 2000\necho "Running Pieces"\npieces', shellType = 'inherit', customShell = '' },
       rightBottomCommand = { command = 'sleep 2000\ngemini', shellType = 'wsl', customShell = '' },
@@ -162,6 +162,50 @@ function agentic.startup_args(pane)
   return agentic.resolve_shell(pane.shellType, pane.customShell)
 end
 
+-- Token expanded in pane/tab commands to the directory holding this generated
+-- file, so workspace definitions never store an absolute path to the manager.
+local MANAGER_DIR_TOKEN = '{managerDir}'
+
+-- Plain (non-pattern) substring replace. string.gsub is unusable here because
+-- the replacement is a Windows path and '%' is a gsub escape character.
+local function replace_plain(text, token, value)
+  local parts = {}
+  local pos = 1
+  while true do
+    local from, to = string.find(text, token, pos, true)
+    if not from then
+      break
+    end
+    table.insert(parts, string.sub(text, pos, from - 1))
+    table.insert(parts, value)
+    pos = to + 1
+  end
+  table.insert(parts, string.sub(text, pos))
+  return table.concat(parts)
+end
+
+-- Directory of this generated file, resolved at load time. dofile sets source
+-- to '@<path>'; loading from a string instead leaves managerDir empty.
+local function manager_dir()
+  local source = debug.getinfo(1, 'S').source
+  local path = string.match(source, '^@(.*)$')
+  if not path then
+    return ''
+  end
+  return string.match(path, '^(.*)[/\\][^/\\]*$') or ''
+end
+
+agentic.managerDir = manager_dir()
+
+-- Expands MANAGER_DIR_TOKEN in a command string. Applied to every startup pane
+-- and extra-tab command, and available to your own wezterm.lua.
+function agentic.expand_command(command)
+  if not command or command == '' then
+    return command
+  end
+  return replace_plain(command, MANAGER_DIR_TOKEN, agentic.managerDir)
+end
+
 local function append(target, item)
   if not target then
     target = {}
@@ -246,7 +290,7 @@ function agentic.setup(config, wezterm, mux)
       return
     end
     wezterm.time.call_after(delay_ms / 1000, function()
-      pane:send_text(command .. '\r')
+      pane:send_text(agentic.expand_command(command) .. '\r')
     end)
   end
 

@@ -70,6 +70,18 @@ return config
 
 Set **Startup → Enabled** off to opt out; WezTerm then opens a plain default window. If you prefer to call it yourself, `agentic.setup(config, wezterm, wezterm.mux)` is safe to call directly — registration is guarded, so calling both it and `apply` will not spawn the layout twice.
 
+#### The `{managerDir}` placeholder
+
+Pane and extra-tab commands may contain `{managerDir}`, which expands to the directory holding `agentic-wezterm.generated.lua` — i.e. wherever this manager lives on the current machine. It lets a command reference a script shipped with the repo without storing an absolute path in your config:
+
+```
+pwsh -NoProfile -ExecutionPolicy Bypass -File "{managerDir}\scripts\Start-ObsidianProfiler.ps1"
+```
+
+The directory is resolved at load time from the generated file's own location (`debug.getinfo`), so the same config works on any machine and across clone paths. Substitution is a plain text replace, so `%` and backslashes in the resolved path are safe. `agentic.managerDir` and `agentic.expand_command(cmd)` are exposed for use in your own `wezterm.lua`.
+
+> Requires loading the file by path (`dofile`, as above). If you load it from a string instead, `managerDir` is empty and the token is replaced with nothing.
+
 ## 📦 Packaging as a Standalone `.exe`
 
 For end users who don't want to install Node.js, the project can be packaged into a single Windows executable that starts the server and opens the browser automatically.
