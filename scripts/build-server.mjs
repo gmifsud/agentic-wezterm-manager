@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 import { build } from 'esbuild';
 
 // express/lib/application.js always pulls in view.js, whose `require(mod)`
@@ -30,18 +31,33 @@ const stubExpressViewEngines = {
 };
 
 // The source is ESM (tsx runs it directly in dev) but the bundle is CJS, where
-// esbuild empties `import.meta`. Supply the one field used from __filename.
-await build({
+// esbuild empties `import.meta`. Supply the one field the server reads.
+//
+// This must stay a file:// URL built by pathToFileURL, not a bare __filename.
+// server/index.ts feeds it straight to fileURLToPath, which rejects a plain
+// Windows path ("C:\..." parses as a URL with scheme "c:"). Under pkg on
+// Windows __filename is C:\snapshot\..., so getting this wrong crashes at
+// module init on Windows only — POSIX paths happen to survive the round trip.
+// Covered by server/__tests__/packaging.test.ts.
+export const IMPORT_META_URL_ID = '__import_meta_url';
+export const IMPORT_META_URL_BANNER = `const ${IMPORT_META_URL_ID} = require('node:url').pathToFileURL(__filename).href;`;
+
+export const serverBuildOptions = {
   entryPoints: ['server/index.ts'],
   bundle: true,
   platform: 'node',
   target: 'node20',
   format: 'cjs',
   outfile: 'dist-server/index.cjs',
-  define: { 'import.meta.url': '__import_meta_url' },
-  banner: {
-    js: "const __import_meta_url = require('node:url').pathToFileURL(__filename).href;",
-  },
+  define: { 'import.meta.url': IMPORT_META_URL_ID },
+  banner: { js: IMPORT_META_URL_BANNER },
   plugins: [stubExpressViewEngines],
   logLevel: 'info',
-});
+};
+
+const invokedDirectly =
+  process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+
+if (invokedDirectly) {
+  await build(serverBuildOptions);
+}
