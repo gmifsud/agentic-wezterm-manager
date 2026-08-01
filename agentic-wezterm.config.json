@@ -48,7 +48,7 @@
     "layout": {
       "type": "quad",
       "leftCommand": {
-        "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"C:\\Repos\\CLI\\agentic-wezterm-manager\\scripts\\Start-ObsidianProfiler.ps1\"",
+        "command": "pwsh -NoProfile -ExecutionPolicy Bypass -File \"{managerDir}\\scripts\\Start-ObsidianProfiler.ps1\"",
         "shellType": "inherit",
         "customShell": ""
       },

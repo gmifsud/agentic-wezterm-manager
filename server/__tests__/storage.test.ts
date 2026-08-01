@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { generateLuaText } from "../storage";
+import type { AgenticConfig } from "../../shared/schema";
 
 vi.mock("fs", () => ({
   existsSync: vi.fn().mockReturnValue(true),
@@ -250,7 +251,9 @@ describe("generateLuaText", () => {
     });
 
     it("should type pane commands with send_text after a staggered delay", () => {
-      expect(lua).toContain("pane:send_text(command .. '\\r')");
+      expect(lua).toContain(
+        "pane:send_text(agentic.expand_command(command) .. '\\r')",
+      );
       expect(lua).toContain("wezterm.time.call_after(delay_ms / 1000,");
       expect(lua).toContain(
         "send_command(entry.pane, entry.command, base_delay + (offset + index - 1) * stagger)",
@@ -274,6 +277,62 @@ describe("generateLuaText", () => {
       expect(lua).toContain("tab:activate()");
       expect(lua).toContain("data.appearance.window.startMaximized then");
       expect(lua).toContain("gui_window:maximize()");
+    });
+  });
+
+  describe("{managerDir} expansion", () => {
+    const gen = (c: unknown) => generateLuaText(c as AgenticConfig);
+    const lua = gen(minimalConfig);
+
+    it("should derive managerDir from the generated file's own location", () => {
+      expect(lua).toContain("local MANAGER_DIR_TOKEN = '{managerDir}'");
+      expect(lua).toContain("local source = debug.getinfo(1, 'S').source");
+      expect(lua).toContain("local path = string.match(source, '^@(.*)$')");
+      // Trailing segment stripped on either separator, since dofile paths are
+      // written with forward slashes as often as backslashes on Windows.
+      expect(lua).toContain(
+        "return string.match(path, '^(.*)[/\\\\][^/\\\\]*$') or ''",
+      );
+      expect(lua).toContain("agentic.managerDir = manager_dir()");
+    });
+
+    it("should substitute the token with a plain, non-pattern replace", () => {
+      // string.find with plain=true, so a '%' in the resolved path cannot be
+      // read as a gsub escape and Windows backslashes need no escaping.
+      expect(lua).toContain(
+        "local from, to = string.find(text, token, pos, true)",
+      );
+      expect(lua).not.toContain("string.gsub(command");
+      expect(lua).toContain("function agentic.expand_command(command)");
+      expect(lua).toContain(
+        "return replace_plain(command, MANAGER_DIR_TOKEN, agentic.managerDir)",
+      );
+    });
+
+    it("should leave an empty or missing command untouched", () => {
+      expect(lua).toContain("if not command or command == '' then");
+    });
+
+    it("should store the token verbatim rather than an absolute path", () => {
+      const config = {
+        ...minimalConfig,
+        startup: {
+          ...minimalConfig.startup,
+          layout: {
+            ...minimalConfig.startup.layout,
+            leftCommand: {
+              command:
+                'pwsh -File "{managerDir}\\scripts\\Start-ObsidianProfiler.ps1"',
+              shellType: "inherit",
+              customShell: "",
+            },
+          },
+        },
+      };
+      const withToken = gen(config);
+      expect(withToken).toContain(
+        "leftCommand = { command = 'pwsh -File \"{managerDir}\\\\scripts\\\\Start-ObsidianProfiler.ps1\"', shellType = 'inherit', customShell = '' }",
+      );
     });
   });
 
