@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { AgenticConfig, agenticConfigSchema } from "../shared/schema";
 import { generateLuaText } from "../shared/lua-generator";
+import { bootTrace } from "./boot-trace";
 
 export { generateLuaText };
 
@@ -19,6 +20,12 @@ const LUA_OUTPUT_FILE = path.join(CONFIG_DIR, "agentic-wezterm.generated.lua");
 // so the wezterm.lua can find it without a hardcoded path.
 const HOME_DIR = process.env.USERPROFILE || process.env.HOME || process.cwd();
 const LUA_HOME_FILE = path.join(HOME_DIR, ".agentic-wezterm.generated.lua");
+
+// Paths only — no fs call at module init, so importing storage stays free of
+// side effects. server/index.ts probes the files during boot.
+bootTrace(`storage: CONFIG_DIR=${CONFIG_DIR} (isPackaged=${isPackaged})`);
+bootTrace(`storage: CONFIG_FILE=${CONFIG_FILE}`);
+bootTrace(`storage: LUA_OUTPUT_FILE=${LUA_OUTPUT_FILE} LUA_HOME_FILE=${LUA_HOME_FILE}`);
 
 function normalizeConfig(config: AgenticConfig): AgenticConfig {
   return {
