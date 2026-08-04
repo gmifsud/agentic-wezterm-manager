@@ -4,9 +4,10 @@ import { bootTrace, bootStage } from './boot-trace';
 import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { exec } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { routes } from './routes';
 import { getMetadata } from './storage';
 import { BUNDLED_SCRIPTS } from './bundled-scripts';
@@ -47,11 +48,19 @@ app.use(express.json());
 app.use('/api', routes);
 bootTrace('END create express app and mount middleware');
 
-// Locate the built Vite assets. Supports two layouts:
-//   - bundled:    dist-server/index.cjs        -> ../dist
-//   - tsc layout: dist-server/server/index.js  -> ../../dist
+// Locate the built Vite assets. Supports three layouts:
+//   - dev:           dist-server/index.cjs -> ../dist
+//   - pkg snapshot:  dist-server/index.cjs (under C:\snapshot\…\dist-server) -> ../dist
+//   - Node SEA:      __filename = process.execPath, dist/ copied next to the exe
+//   - tsc layout:    dist-server/server/index.js -> ../../dist
+//
+// The first candidate with an index.html wins. SEA is checked first because
+// its __filename == exe path, so path.resolve(__thisDir, '../dist') lands
+// one level above the exe — wrong for the SEA layout, where dist/ is sibling
+// to the exe.
 function findDistDir(): string {
   const candidates = [
+    path.resolve(__thisDir, 'dist'),
     path.resolve(__thisDir, '../dist'),
     path.resolve(__thisDir, '../../dist'),
   ];
@@ -113,6 +122,121 @@ bootStage('probe config files', () => {
   );
 });
 
+// Tangible artifact for the Explorer-double-click case: pkg builds a GUI
+// subsystem exe on Windows, so console.log output is invisible and the
+// auto-open can silently fail. Drop a small JSON file next to the exe
+// (or next to the bundle in dev) containing the URL the user should hit,
+// plus the listen timestamp. If the file is missing after launch, boot
+// never reached listen — check agentic-wezterm-manager.boot.log.
+function writeReadyFile(url: string, port: number): void {
+  const { isPackaged } = getMetadata();
+  const readyDir = isPackaged ? path.dirname(process.execPath) : __thisDir;
+  const readyPath = path.join(readyDir, 'agentic-wezterm-manager.ready.json');
+  try {
+    fs.writeFileSync(
+      readyPath,
+      JSON.stringify(
+        { url, port, startedAt: new Date().toISOString() },
+        null,
+        2,
+      ),
+    );
+    bootTrace(`ready file written to ${readyPath}`);
+  } catch (err) {
+    bootTrace(`ready file write FAILED ${readyPath}: ${err}`);
+  }
+}
+
+// Spawns a small console window that displays the URL/port and acts as the
+// kill switch: closing this window shuts the server down. Two processes
+// are involved:
+//   1. `cmd.exe /c start "title" /WAIT cmd.exe /K bat` — the wrapper. We
+//      keep this process's PID.
+//   2. The inner `cmd.exe /K bat` — the visible window. `start` allocates
+//      it a fresh console because the SEA GUI-subsystem parent has none
+//      to hand down. `/WAIT` blocks the wrapper until the inner cmd exits.
+// The bat ends in `timeout /t <big number> /nobreak >nul` rather than
+// `pause` — `pause` reads console input, and on some hosts the inner
+// cmd's stdin is not wired the way `start` expects, causing it to read
+// EOF and exit within ~1 s. `timeout` does not depend on stdin at all, so
+// it holds the window open regardless of how the console was allocated.
+// When the user closes the window, the inner cmd dies, `/WAIT` releases,
+// the wrapper exits, our poll (on the wrapper's PID) notices, and
+// shutdown() runs.
+function openStatusWindow(url: string, port: number): void {
+  if (process.platform !== 'win32') return;
+  if (process.env.NO_OPEN === '1') return;
+  const banner = [
+    '@echo off',
+    'chcp 65001 >nul',
+    'title Agentic WezTerm Manager',
+    'echo.',
+    'echo   Agentic WezTerm Manager is running',
+    'echo.',
+    `echo       URL:    ${url}`,
+    `echo       Port:   ${port}`,
+    'echo.',
+    'echo   The browser should have opened automatically.',
+    'echo.',
+    'echo   Close this window to stop the server.',
+    'echo.',
+    // timeout's /T only accepts -1..99999 seconds (~27.7h). /nobreak means
+    // it ignores keypresses and only stops on Ctrl+C or the window
+    // closing, so it doesn't depend on stdin being wired correctly.
+    'timeout /t 99999 /nobreak >nul',
+  ].join('\r\n');
+  let tmp: string;
+  try {
+    tmp = path.join(os.tmpdir(), 'agentic-wezterm-manager-status.bat');
+    fs.writeFileSync(tmp, banner, 'utf-8');
+  } catch (err) {
+    bootTrace(`status window script write FAILED: ${err}`);
+    return;
+  }
+  bootTrace(`status window script written to ${tmp}`);
+  let child;
+  try {
+    child = spawn(
+      'cmd.exe',
+      ['/c', 'start', 'Agentic WezTerm Manager', '/WAIT', 'cmd.exe', '/K', tmp],
+      { detached: true, stdio: 'ignore' },
+    );
+  } catch (err) {
+    bootTrace(`status window spawn threw ${err instanceof Error ? err.message : String(err)}`);
+    return;
+  }
+  if (!child.pid) {
+    bootTrace('status window spawn returned no pid');
+    return;
+  }
+  bootTrace(`status window spawned, wrapper pid=${child.pid}`);
+  child.on('error', (err) => {
+    bootTrace(`status window child error ${err.message}`);
+  });
+  child.unref();
+
+  const wrapperPid = child.pid;
+  const poll = setInterval(() => {
+    // tasklist.exe ALWAYS exits 0, even on no match — it just prints
+    // "INFO: No tasks are running which match the specified criteria."
+    // to stdout instead of a process line. r.status is therefore useless
+    // as a liveness check; the process line itself (containing the pid
+    // as a distinct token) is the only reliable signal.
+    const r = spawnSync('tasklist.exe', ['/FI', `PID eq ${wrapperPid}`, '/NH'], {
+      encoding: 'utf-8',
+      windowsHide: true,
+    });
+    const stdout = r.stdout ?? '';
+    const stillRunning = new RegExp(`\\b${wrapperPid}\\b`).test(stdout);
+    if (!stillRunning) {
+      bootTrace(`status window wrapper pid=${wrapperPid} exited (tasklist: ${stdout.trim()}), shutting down`);
+      clearInterval(poll);
+      shutdown('status-window-closed');
+    }
+  }, 750);
+  poll.unref();
+}
+
 bootStage('unpack bundled scripts from snapshot', deployBundledScripts);
 
 bootTrace('BEGIN mount static assets and SPA fallback');
@@ -124,15 +248,46 @@ app.get(/^\/(?!api).*/, (_req, res) => {
 bootTrace('END mount static assets and SPA fallback');
 
 function openBrowser(url: string): void {
-  const cmd =
-    process.platform === 'win32'
-      ? `start "" "${url}"`
-      : process.platform === 'darwin'
-        ? `open "${url}"`
-        : `xdg-open "${url}"`;
-  exec(cmd, (err) => {
-    if (err) console.warn('Could not open browser automatically:', err.message);
+  // pkg builds the Windows exe as a GUI subsystem binary, so the inherited
+  // stdio is missing/closed and `child_process.exec` (which goes through a
+  // shell) is unreliable from there. `spawn` with detached + stdio: 'ignore'
+  // gives the child its own handles and severs it from the parent, which is
+  // what makes the auto-open work from an Explorer double-click.
+  let cmd: string;
+  let args: string[];
+  if (process.platform === 'win32') {
+    cmd = 'cmd';
+    // `start "" URL` — first "" is the window title, kept empty.
+    args = ['/c', 'start', '""', url];
+  } else if (process.platform === 'darwin') {
+    cmd = 'open';
+    args = [url];
+  } else {
+    cmd = 'xdg-open';
+    args = [url];
+  }
+  bootTrace(`openBrowser: spawning ${cmd} ${args.map((a) => (a.includes(' ') ? `"${a}"` : a)).join(' ')}`);
+  let child;
+  try {
+    child = spawn(cmd, args, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+      shell: false,
+    });
+  } catch (err) {
+    bootTrace(`openBrowser: spawn threw ${err instanceof Error ? err.message : String(err)}`);
+    console.warn('Could not open browser automatically:', err);
+    return;
+  }
+  child.on('error', (err) => {
+    // The most common failure here is no default-browser association, which
+    // would otherwise leave the user staring at nothing. Surface it via the
+    // boot log so it is discoverable on disk, not just in the missing console.
+    bootTrace(`openBrowser: child error ${err.message}`);
+    console.warn('Could not open browser automatically:', err.message);
   });
+  child.unref();
 }
 
 function listen(port: number, attempt = 0): void {
@@ -141,6 +296,9 @@ function listen(port: number, attempt = 0): void {
     const url = `http://localhost:${port}`;
     bootTrace(`listening on port ${port} at ${url}`);
     console.log(`Agentic WezTerm Manager running at ${url}`);
+    httpServer = server;
+    bootStage('write ready file', () => writeReadyFile(url, port));
+    bootStage('open status window', () => openStatusWindow(url, port));
     if (process.env.NO_OPEN !== '1') {
       bootTrace('BEGIN open browser');
       openBrowser(url);
@@ -161,3 +319,48 @@ function listen(port: number, attempt = 0): void {
 }
 
 listen(DEFAULT_PORT);
+
+// === Shutdown ============================================================
+// Idempotent. Called from three places:
+//   1. SIGINT — Ctrl+C in a parent console, or `kill -INT <pid>`.
+//   2. SIGTERM — `taskkill /pid <pid>` (graceful) or any signal that
+//      Windows can translate. Note: closing the taskbar entry or
+//      `taskkill /F` use TerminateProcess which cannot be caught — those
+//      paths leave the port in TIME_WAIT (~60 s) until Windows releases it.
+//   3. SIGHUP — some Windows builds deliver this on taskbar Close.
+//
+// Closes the HTTP server (releases the port), removes ready.json so a
+// subsequent launch doesn't get confused, and exits with 0.
+let httpServer: ReturnType<typeof app.listen> | null = null;
+let shuttingDown = false;
+function shutdown(reason: string): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  bootTrace(`shutdown BEGIN reason=${reason}`);
+  try {
+    if (httpServer) httpServer.close(() => bootTrace('http server closed'));
+  } catch (err) {
+    bootTrace(`http server close threw ${err}`);
+  }
+  try {
+    const { isPackaged } = getMetadata();
+    const readyDir = isPackaged ? path.dirname(process.execPath) : __thisDir;
+    const readyPath = path.join(readyDir, 'agentic-wezterm-manager.ready.json');
+    if (fs.existsSync(readyPath)) fs.unlinkSync(readyPath);
+    bootTrace(`ready file removed: ${readyPath}`);
+  } catch (err) {
+    bootTrace(`ready file removal FAILED: ${err}`);
+  }
+  bootTrace(`shutdown END reason=${reason}`);
+  // Give the boot-trace appendFile a tick to flush before we exit.
+  setTimeout(() => process.exit(0), 50).unref();
+}
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+if (process.platform === 'win32') {
+  process.on('SIGHUP', () => shutdown('SIGHUP'));
+}
+process.on('exit', (code) => {
+  // Last-resort cleanup. If shutdown() already ran we have nothing to do.
+  bootTrace(`process exit code=${code}`);
+});

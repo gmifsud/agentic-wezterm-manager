@@ -1,0 +1,38 @@
+
+> agentic-wezterm-manager@0.0.0 test
+> vitest
+
+
+ RUN  v4.1.4 D:/Repos/CLI/agentic-wezterm-manager
+
+ ❯ src/__tests__/lua-wezterm-sandbox.test.ts (2 tests | 1 failed) 74ms
+     × loads cleanly when debug=nil (wezterm sandbox) 73ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/__tests__/lua-wezterm-sandbox.test.ts > generated lua runs under wezterm-like sandbox > loads cleanly when debug=nil (wezterm sandbox)
+AssertionError: lua interpreter lua failed: status=1 stderr=FAIL: [string "C:\Users\grego\AppData\Local\Temp\lua-sandb..."]:113: attempt to call field 'unpack' (a nil value)
+: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ src/__tests__/lua-wezterm-sandbox.test.ts:63:9
+     61|         result.status,
+     62|         `lua interpreter ${bin} failed: status=${result.status} stderr…
+     63|       ).toBe(0);
+       |         ^
+     64|       expect(result.stdout).toContain('OK under wezterm sandbox');
+     65|       expect(result.stderr).not.toContain('attempt to index a nil valu…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 45 passed (46)
+   Start at  20:05:14
+   Duration  739ms (transform 156ms, setup 0ms, import 320ms, tests 364ms, environment 1.02s)
+

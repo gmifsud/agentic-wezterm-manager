@@ -43,10 +43,71 @@ const minimalConfig = {
 };
 
 describe('agenticConfigSchema', () => {
+  // The schema defaults are the workspace that ships with the bundled exe —
+  // a fresh `agentic-wezterm.config.json` is empty/missing and WezTerm is
+  // configured from these defaults via loadConfig(). Pin them here so a
+  // future edit to shared/schema.ts that drifts away from the Knowledge
+  // workspace gets caught at test time, not in the user's terminal.
   it('should apply top-level defaults', () => {
     const result = agenticConfigSchema.parse({});
-    expect(result.workspaceName).toBe('agentic');
+    expect(result.workspaceName).toBe('Knowledge');
     expect(result.shell).toBe('pwsh.exe');
+    expect(result.shellType).toBe('pwsh');
+    expect(result.projectDir).toBe('C:\\Users\\grego\\Documents\\Obsidian\\Knowledge');
+  });
+
+  it('should apply appearance defaults matching the Knowledge workspace', () => {
+    const result = agenticConfigSchema.parse({});
+    expect(result.appearance.colorScheme).toBe('Monokai Pro Octagon (Gogh)');
+    expect(result.appearance.font.family).toBe('Roboto Mono');
+    expect(result.appearance.font.size).toBe(8);
+    expect(result.appearance.window.startMaximized).toBe(true);
+    expect(result.appearance.window.padding).toEqual({
+      left: 8,
+      right: 8,
+      top: 6,
+      bottom: 6,
+    });
+    expect(result.appearance.cursor.style).toBe('BlinkingBlock');
+  });
+
+  it('should ship the quad startup layout with Knowledge pane commands', () => {
+    const result = agenticConfigSchema.parse({});
+    expect(result.startup.enabled).toBe(true);
+    expect(result.startup.commandDelayMs).toBe(500);
+    expect(result.startup.layout.type).toBe('quad');
+    expect(result.startup.layout.leftCommand.command).toContain('Consulting the oracle');
+    expect(result.startup.layout.rightTopCommand.shellType).toBe('wsl');
+    expect(result.startup.layout.rightBottomCommand.shellType).toBe('gitbash');
+    expect(result.startup.layout.leftBottomCommand.command).toContain('Checking Ollama');
+  });
+
+  it('should ship six extra tabs in declaration order', () => {
+    const result = agenticConfigSchema.parse({});
+    const titles = result.startup.extraTabs.map((t) => t.title);
+    expect(titles).toEqual([
+      'Pieces',
+      'Miyo',
+      'Weztern Commands',
+      'Neovim Commands',
+      'Kilocode Console',
+      'Vault Architect',
+    ]);
+  });
+
+  it('should ship the Monokai Pro Octagon palette under themes', () => {
+    const result = agenticConfigSchema.parse({});
+    const palette = result.themes['Monokai Pro Octagon (Gogh)'];
+    expect(palette).toBeDefined();
+    expect(palette.background).toBe('#282a3a');
+    expect(palette.foreground).toBe('#eaf2f1');
+    expect(palette.ansi).toHaveLength(8);
+    expect(palette.brights).toHaveLength(8);
+  });
+
+  it('should default behavior.copyOnSelect to true', () => {
+    const result = agenticConfigSchema.parse({});
+    expect(result.behavior.copyOnSelect).toBe(true);
   });
 
   it('should parse config with custom values', () => {

@@ -41,7 +41,65 @@ const stubExpressViewEngines = {
 // module init on Windows only — POSIX paths happen to survive the round trip.
 // Covered by server/__tests__/packaging.test.ts.
 export const IMPORT_META_URL_ID = '__import_meta_url';
-export const IMPORT_META_URL_BANNER = `const ${IMPORT_META_URL_ID} = require('node:url').pathToFileURL(__filename).href;`;
+
+// The banner runs as the very first statement of the bundled CJS, before
+// server/index.ts's uncaughtException handler is installed. A throw here
+// (pathToFileURL rejecting an unexpected __filename spelling, e.g. an
+// early-yao-pkg pkg version returning a bare /snapshot/... path on Windows)
+// would otherwise kill the packaged exe silently: pkg builds a GUI-subsystem
+// binary on Windows, no console window, no log file. Wrap the substitution in
+// a try/catch that writes to a hardcoded log path before re-throwing so the
+// failure mode is discoverable from Explorer by opening .boot.log.
+//
+// The success path only calls require('node:url'), so the existing packaging
+// test (which stubs require to return only pathToFileURL) keeps working.
+export const IMPORT_META_URL_BANNER = `
+function __pkgBootFatal(label, err) {
+  try {
+    var __p = require('node:path');
+    var __f = require('node:fs');
+    var __o = require('node:os');
+    var __base = typeof process.pkg !== 'undefined' ? __p.dirname(process.execPath) : process.cwd();
+    var __path = __p.join(__base, 'agentic-wezterm-manager.boot.log');
+    try { __f.writeFileSync(__path, ''); }
+    catch (_) {
+      __path = __p.join(__o.tmpdir(), 'agentic-wezterm-manager.boot.log');
+      try { __f.writeFileSync(__path, ''); } catch (_) {}
+    }
+    if (__path) {
+      __f.appendFileSync(__path, new Date().toISOString() + ' [boot] FATAL ' + label + ': ' + (err && err.stack || err) + '\\n');
+    }
+  } catch (_) {
+    // Best-effort diagnostic. Nothing further to do; the original error
+    // is re-thrown below so pkg still exits non-zero.
+  }
+}
+// Sentinel: if a freshly-built packaged exe is launched and *no* later log
+// line ever appears (because pkg's snapshot resolver failed to map a module
+// and our entry died silently), this file alone proves the entry point ran
+// at all. Without it, the only signal the user has is "the exe exited and
+// nothing is on disk", which is indistinguishable from "the exe was never
+// launched" or "an antivirus blocked it".
+function __pkgBootSentinel() {
+  try {
+    var __p = require('node:path');
+    var __f = require('node:fs');
+    var __base = typeof process.pkg !== 'undefined' ? __p.dirname(process.execPath) : process.cwd();
+    var __path = __p.join(__base, 'agentic-wezterm-manager.started');
+    __f.writeFileSync(__path, new Date().toISOString() + ' pid=' + process.pid + ' node=' + process.version + '\\n');
+  } catch (_) {
+    // Same caveat as __pkgBootFatal — never let diagnostics kill boot.
+  }
+}
+__pkgBootSentinel();
+var ${IMPORT_META_URL_ID};
+try {
+  ${IMPORT_META_URL_ID} = require('node:url').pathToFileURL(__filename).href;
+} catch (err) {
+  __pkgBootFatal('banner pathToFileURL failed (boot dies before uncaughtException is installed)', err);
+  throw err;
+}
+`;
 
 export const SERVER_BUNDLE = 'dist-server/index.cjs';
 

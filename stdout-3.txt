@@ -1,0 +1,42 @@
+2026-08-02T14:11:27.681Z [boot] process start - log file: D:\Repos\CLI\agentic-wezterm-manager\release\agentic-wezterm-manager.boot.log
+2026-08-02T14:11:27.684Z [boot] node v20.20.2 on win32/x64, pid 34780
+2026-08-02T14:11:27.685Z [boot] isPackaged=true execPath=D:\Repos\CLI\agentic-wezterm-manager\release\agentic-wezterm-manager.exe
+2026-08-02T14:11:27.685Z [boot] cwd=D:\Repos\CLI\agentic-wezterm-manager\release
+2026-08-02T14:11:27.687Z [boot] import.meta.url=file:///C:/snapshot/agentic-wezterm-manager/dist-server/index.cjs -> dirname=C:\snapshot\agentic-wezterm-manager\dist-server
+2026-08-02T14:11:27.688Z [boot] snapshot path=true
+2026-08-02T14:11:27.688Z [boot] argv=["D:\\Repos\\CLI\\agentic-wezterm-manager\\release\\agentic-wezterm-manager.exe","C:\\snapshot\\agentic-wezterm-manager\\dist-server\\index.cjs"]
+2026-08-02T14:11:27.689Z [boot] env PORT=3073 CONFIG_DIR=(unset) NO_OPEN=1
+2026-08-02T14:11:27.689Z [boot] BEGIN module init - loading entry module dependencies
+2026-08-02T14:11:27.707Z [boot] storage: CONFIG_DIR=D:\Repos\CLI\agentic-wezterm-manager\release (isPackaged=true)
+2026-08-02T14:11:27.708Z [boot] storage: CONFIG_FILE=D:\Repos\CLI\agentic-wezterm-manager\release\agentic-wezterm.config.json
+2026-08-02T14:11:27.708Z [boot] storage: LUA_OUTPUT_FILE=D:\Repos\CLI\agentic-wezterm-manager\release\agentic-wezterm.generated.lua LUA_HOME_FILE=C:\Users\grego\.agentic-wezterm.generated.lua
+2026-08-02T14:11:27.709Z [boot] END module init - express, cors, routes, storage all loaded
+2026-08-02T14:11:27.709Z [boot] BEGIN resolve __thisDir from import.meta.url
+2026-08-02T14:11:27.710Z [boot] END resolve __thisDir from import.meta.url
+2026-08-02T14:11:27.710Z [boot] __thisDir=C:\snapshot\agentic-wezterm-manager\dist-server
+2026-08-02T14:11:27.711Z [boot] BEGIN create express app and mount middleware
+2026-08-02T14:11:27.711Z [boot] END create express app and mount middleware
+2026-08-02T14:11:27.712Z [boot] BEGIN locate dist assets
+2026-08-02T14:11:27.712Z [boot] dist candidate C:\snapshot\agentic-wezterm-manager\dist: index.html found
+2026-08-02T14:11:27.713Z [boot] dist candidate C:\snapshot\dist: index.html missing
+2026-08-02T14:11:27.713Z [boot] END locate dist assets
+2026-08-02T14:11:27.714Z [boot] distDir=C:\snapshot\agentic-wezterm-manager\dist
+2026-08-02T14:11:27.714Z [boot] BEGIN probe config files
+2026-08-02T14:11:27.714Z [boot] config dir D:\Repos\CLI\agentic-wezterm-manager\release: exists
+2026-08-02T14:11:27.715Z [boot] config file D:\Repos\CLI\agentic-wezterm-manager\release\agentic-wezterm.config.json: absent, defaults will be used
+2026-08-02T14:11:27.715Z [boot] generated lua D:\Repos\CLI\agentic-wezterm-manager\release\agentic-wezterm.generated.lua: present
+2026-08-02T14:11:27.715Z [boot] END probe config files
+2026-08-02T14:11:27.715Z [boot] BEGIN unpack bundled scripts from snapshot
+2026-08-02T14:11:27.716Z [boot] unpack: isPackaged=true configDir=D:\Repos\CLI\agentic-wezterm-manager\release
+2026-08-02T14:11:27.716Z [boot] unpack BEGIN Start-ObsidianProfiler.ps1: C:\snapshot\agentic-wezterm-manager\scripts\Start-ObsidianProfiler.ps1 -> D:\Repos\CLI\agentic-wezterm-manager\release\scripts\Start-ObsidianProfiler.ps1
+2026-08-02T14:11:27.717Z [boot] unpack END Start-ObsidianProfiler.ps1
+2026-08-02T14:11:27.717Z [boot] END unpack bundled scripts from snapshot
+2026-08-02T14:11:27.718Z [boot] BEGIN mount static assets and SPA fallback
+2026-08-02T14:11:27.718Z [boot] END mount static assets and SPA fallback
+2026-08-02T14:11:27.719Z [boot] about to listen on port 3073 (attempt 0)
+2026-08-02T14:11:27.722Z [boot] listening on port 3073 at http://localhost:3073
+Agentic WezTerm Manager running at http://localhost:3073
+2026-08-02T14:11:27.722Z [boot] BEGIN write ready file
+2026-08-02T14:11:27.723Z [boot] ready file written to D:\Repos\CLI\agentic-wezterm-manager\release\agentic-wezterm-manager.ready.json
+2026-08-02T14:11:27.723Z [boot] END write ready file
+2026-08-02T14:11:27.723Z [boot] boot complete

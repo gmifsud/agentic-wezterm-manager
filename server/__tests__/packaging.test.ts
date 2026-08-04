@@ -1,7 +1,7 @@
 // @vitest-environment node
 // esbuild refuses to load under jsdom, whose TextEncoder is not a real Uint8Array.
 import { describe, it, expect } from "vitest";
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -100,16 +100,25 @@ describe("server build script", () => {
 });
 
 describe("bundled script assets", () => {
-  const pkgJson = JSON.parse(
-    readFileSync(new URL("../../package.json", import.meta.url), "utf-8"),
+  const scriptsRoot = path.join(
+    fileURLToPath(new URL("../../", import.meta.url)),
+    "scripts",
   );
 
-  it("should unpack every scripts/ asset pkg embeds", () => {
-    const embedded = (pkgJson.pkg.assets as string[])
-      .filter((asset) => asset.startsWith("scripts/"))
-      .map((asset) => asset.slice("scripts/".length));
-    expect(embedded).not.toHaveLength(0);
-    expect(BUNDLED_SCRIPTS).toEqual(embedded);
+  // The Node SEA build (scripts/build-sea.mjs) copies scripts/ alongside the
+  // exe rather than embedding them like pkg did. The runtime contract is the
+  // same: the unpacked file at release/scripts/<name> must exist for the
+  // {managerDir} command in the generated Lua to work. Build pipeline
+  // integrity is now verified by build-sea.mjs itself (it copies the file
+  // and the verify step probes the runtime), so this test pins the contract
+  // between the runtime's expected list and the actual file on disk.
+  it("should mirror the profiler launcher scripts/ contains", () => {
+    const onDisk = existsSync(
+      path.join(scriptsRoot, "Start-ObsidianProfiler.ps1"),
+    )
+      ? ["Start-ObsidianProfiler.ps1"]
+      : [];
+    expect(BUNDLED_SCRIPTS).toEqual(onDisk);
   });
 
   it("should reference the profiler launcher the {managerDir} command invokes", () => {

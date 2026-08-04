@@ -286,8 +286,11 @@ describe("generateLuaText", () => {
 
     it("should derive managerDir from the generated file's own location", () => {
       expect(lua).toContain("local MANAGER_DIR_TOKEN = '{managerDir}'");
-      expect(lua).toContain("local source = debug.getinfo(1, 'S').source");
-      expect(lua).toContain("local path = string.match(source, '^@(.*)$')");
+      // WezTerm's sandbox strips the debug library; the helper must therefore
+      // be debug-tolerant rather than indexing debug unconditionally.
+      expect(lua).toContain("pcall(function()");
+      expect(lua).toContain("debug.getinfo and debug.getinfo(1, 'S') or nil");
+      expect(lua).toContain("local path = string.match(info.source or '', '^@(.*)$')");
       // Trailing segment stripped on either separator, since dofile paths are
       // written with forward slashes as often as backslashes on Windows.
       expect(lua).toContain(

@@ -13,21 +13,12 @@
     "clean": "node -e \"const fs=require('fs');for(const d of ['dist','dist-server'])fs.rmSync(d,{recursive:true,force:true})\"",
     "rebuild-package": "npm run clean && npm run package",
     "start": "node dist-server/index.cjs",
-    "package": "npm run build:all && node scripts/check-server-bundle.mjs && pkg . --out-path release",
+    "package": "npm run build:all && node scripts/check-server-bundle.mjs && node scripts/build-sea.mjs",
     "update:schemes": "node scripts/fetch-builtin-schemes.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui"
-  },
-  "pkg": {
-    "assets": [
-      "dist/**/*",
-      "scripts/Start-ObsidianProfiler.ps1"
-    ],
-    "targets": [
-      "node20-win-x64"
-    ]
   },
   "dependencies": {
     "cors": "^2.8.6",
@@ -46,7 +37,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/ui": "^4.1.4",
-    "@yao-pkg/pkg": "^6.19.0",
     "autoprefixer": "^10.4.27",
     "concurrently": "^9.2.1",
     "esbuild": "^0.28.0",
@@ -56,6 +46,7 @@
     "globals": "^17.4.0",
     "jsdom": "^29.0.2",
     "postcss": "^8.5.9",
+    "postject": "^1.0.0-alpha.6",
     "smol-toml": "^1.6.1",
     "tailwindcss": "^4.2.2",
     "ts-node": "^10.9.2",

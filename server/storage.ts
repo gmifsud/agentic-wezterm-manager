@@ -6,10 +6,15 @@ import { bootTrace } from "./boot-trace";
 
 export { generateLuaText };
 
-// When packaged with pkg, `process.pkg` is defined and `process.cwd()` is the
-// caller's directory, not the project. Fall back to the .exe's own directory so
-// the config sits next to the executable.
-const isPackaged = typeof (process as { pkg?: unknown }).pkg !== "undefined";
+// Detect a packaged distribution. Two flavours:
+//   - pkg / yao-pkg sets `process.pkg`.
+//   - Node SEA (Single Executable Application) does not, but the entry's
+//     `__filename` then equals `process.execPath` because the embedded JS
+//     runs from the exe's own path. Either signal collapses to "the user is
+//     running a binary we shipped them, not the source."
+const isPackaged =
+  typeof (process as { pkg?: unknown }).pkg !== "undefined" ||
+  process.execPath === __filename;
 const CONFIG_DIR =
   process.env.CONFIG_DIR ||
   (isPackaged ? path.dirname(process.execPath) : process.cwd());

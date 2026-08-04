@@ -15,7 +15,13 @@ import { fileURLToPath } from 'node:url';
 
 const LOG_NAME = 'agentic-wezterm-manager.boot.log';
 
-const isPackaged = typeof (process as { pkg?: unknown }).pkg !== 'undefined';
+// Two packaged runtimes we support: pkg (sets `process.pkg`) and Node SEA
+// (entry's __filename equals process.execPath because the embedded JS runs
+// from the exe's own path). Either collapses to "the user is running a
+// binary we shipped, not the source", which changes where we write the log.
+const isPackaged =
+  typeof (process as { pkg?: unknown }).pkg !== 'undefined' ||
+  process.execPath === __filename;
 
 // Truncating with an empty write doubles as the writability probe, so the
 // fallback is chosen before the first stage rather than mid-boot.

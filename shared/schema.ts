@@ -16,11 +16,19 @@ export const CLI_PRESETS: Record<string, { shell: string }> = {
   custom: { shell: "" },
 };
 
+// Default workspace. These constants are the schema defaults — a fresh
+// `agenticConfigSchema.parse({})` produces a config equal to what the user
+// gets on first launch when no `agentic-wezterm.config.json` is on disk.
+// Every constant here is referenced from `agenticConfigSchema`'s `.default()`
+// calls further down, so changing a value here changes the runtime default.
+const OBSIDIAN_KNOWLEDGE_DIR = "C:\\Users\\grego\\Documents\\Obsidian\\Knowledge";
+const MONOKAI_OCTAGON = "Monokai Pro Octagon (Gogh)";
+
 const defaultAppearance = {
-  colorScheme: "Builtin Solarized Dark",
+  colorScheme: MONOKAI_OCTAGON,
   font: {
-    family: "Cascadia Code",
-    size: 12.0,
+    family: "Roboto Mono",
+    size: 8,
     lineHeight: 1.0,
   },
   window: {
@@ -42,47 +50,157 @@ const defaultBehavior = {
   audibleBell: "Disabled",
   adjustWindowSizeWhenChangingFontSize: false,
   defaultDomain: "local",
-  copyOnSelect: false,
+  copyOnSelect: true,
 };
 
-function defaultPane(command: string) {
-  return { command, shellType: "inherit" as const, customShell: "" };
+function defaultPane(command: string, shellType: "inherit" | "wsl" | "gitbash" = "inherit") {
+  return { command, shellType, customShell: "" };
 }
 
+// Mirrors the panes in the shipped Knowledge workspace. These commands are
+// what WezTerm runs in each quadrant of the layout on `gui-startup`. The
+// `inherit` shellType means "use the global `shell`/`shellType` from above";
+// `wsl` and `gitbash` are per-pane overrides where the global default
+// (pwsh.exe) would not work — e.g. running an Ubuntu shell on Windows.
 const defaultStartup = {
   enabled: true,
   commandDelayMs: 500,
   layout: {
-    type: "quad",
-    leftCommand: defaultPane("powershell"),
-    rightTopCommand: defaultPane("claude"),
-    leftBottomCommand: defaultPane("codex"),
-    rightBottomCommand: defaultPane("gemini"),
+    type: "quad" as const,
+    leftCommand: defaultPane(
+      `echo "Consulting the oracle ...."
+
+cd C:\\Users\\grego\\Documents\\Obsidian\\Knowledge
+Start-Process "$env:LOCALAPPDATA\\Programs\\obsidian\\Obsidian.exe" -ArgumentList "--remote-debugging-port=9222"
+sleep 5
+cd C:\\Users\\grego\\Documents\\Obsidian\\Knowledge\\Data\\Scripts\\obsidian-profiler
+node profile.js`,
+    ),
+    rightTopCommand: defaultPane(
+      `echo "Waking up openclaw ...."
+sleep 2
+nvm use default
+sleep 3
+openclaw logs --follow`,
+      "wsl",
+    ),
+    leftBottomCommand: defaultPane(
+      `echo "Checking Ollama"
+ollama serve &>/tmp/ollama.log & \`
+ sleep 2 & \`
+ curl -s http://localhost:11434 & \`
+ echo "✅ Ollama is up"
+
+echo "Checking LMS Headless"
+lms daemon up
+echo "✅ LMS is up"
+
+sleep 4
+echo "Starting agy"
+agy
+`,
+    ),
+    rightBottomCommand: defaultPane(
+      `cd ~
+echo "Ubuntu Gemini CLI  ...."
+sleep 2
+gemini`,
+      "gitbash",
+    ),
   },
-  extraTabs: [],
+  // Extra tabs opened alongside the quad layout, in declaration order. Each
+  // tab gets its own window in WezTerm with `title` as the tab label.
+  extraTabs: [
+    {
+      command: `echo "Pieces"
+sleep 2
+pieces-cli`,
+      title: "Pieces",
+      shellType: "inherit" as const,
+      customShell: "",
+    },
+    {
+      command: `echo "miyo"
+sleep 2
+miyo`,
+      title: "Miyo",
+      shellType: "inherit" as const,
+      customShell: "",
+    },
+    {
+      command: `nvim "C:\\Users\\grego\\Documents\\Obsidian\\Knowledge\\Engineering\\Tooling\\TMUX\\Wezterm Cheatsheet.md"`,
+      title: "Weztern Commands",
+      shellType: "inherit" as const,
+      customShell: "",
+    },
+    {
+      command: `nvim C:\\Users\\grego\\Documents\\Obsidian\\Knowledge\\Engineering\\Tooling\\IDE\\Neovim`,
+      title: "Neovim Commands",
+      shellType: "inherit" as const,
+      customShell: "",
+    },
+    {
+      command: `echo "booting kilo console ...."
+sleep 5
+kilo console
+`,
+      title: "Kilocode Console",
+      shellType: "inherit" as const,
+      customShell: "",
+    },
+    {
+      command: `sleep 5
+echo "Starting Vault Architect ...."
+cd C:\\Repos\\gd-obsidian-agentic-vault
+npm run server`,
+      title: "Vault Architect",
+      shellType: "inherit" as const,
+      customShell: "",
+    },
+  ],
 };
 
 const defaultAnsiColors = [
-  "#1e1e1e",
-  "#f48771",
-  "#a1cd5e",
-  "#e4c877",
-  "#6ab0f3",
-  "#f47590",
-  "#00bcd4",
-  "#d4d4d4",
+  "#282a3a",
+  "#ff657a",
+  "#bad761",
+  "#ffd76d",
+  "#ff9b5e",
+  "#c39ac9",
+  "#9cd1bb",
+  "#eaf2f1",
 ];
 
 const defaultBrightColors = [
-  "#8b8b8b",
-  "#f48771",
-  "#a1cd5e",
-  "#e4c877",
-  "#6ab0f3",
-  "#f47590",
-  "#00bcd4",
-  "#ffffff",
+  "#696d77",
+  "#ff657a",
+  "#bad761",
+  "#ffd76d",
+  "#ff9b5e",
+  "#c39ac9",
+  "#9cd1bb",
+  "#eaf2f1",
 ];
+
+// Default custom palette for Monokai Pro Octagon. WezTerm ships its own
+// copy of this scheme as a built-in, but exporting the palette explicitly
+// keeps the generated Lua self-contained: even if the WezTerm binary's
+// builtin changes, this workspace's appearance is locked.
+const defaultMonokaiOctagonPalette = {
+  foreground: "#eaf2f1",
+  background: "#282a3a",
+  cursor_bg: "#b2b9bd",
+  cursor_fg: "#f2f9fd",
+  cursor_border: "#b2b9bd",
+  selection_fg: "#eaf2f1",
+  selection_bg: "#535763",
+  scrollbar_thumb: "#282a3a",
+  split: "#282a3a",
+  compose_cursor: "#ffd76d",
+  ansi: defaultAnsiColors,
+  brights: defaultBrightColors,
+  indexed: {},
+};
 
 // A startup pane: text command + optional per-pane shell override.
 // Accepts a bare string (legacy format) and rewrites it on the fly so existing
@@ -375,13 +493,13 @@ export const KEYBINDING_ACTIONS: Record<
 };
 
 export const agenticConfigSchema = z.object({
-  workspaceName: stringField().default("agentic"),
+  workspaceName: stringField().default("Knowledge"),
   shell: stringField().default("pwsh.exe"),
   shellType: z
     .enum(["pwsh", "powershell", "cmd", "clink", "wsl", "gitbash", "custom"])
     .default("pwsh"),
   customShell: stringField().default(""),
-  projectDir: stringField().default("C:\\path\\to\\your\\repo"),
+  projectDir: stringField().default(OBSIDIAN_KNOWLEDGE_DIR),
   appearance: z
     .object({
       colorScheme: stringField().default(defaultAppearance.colorScheme),
@@ -479,7 +597,9 @@ export const agenticConfigSchema = z.object({
       }),
     )
     .default({}),
-  themes: z.record(z.string(), colorPaletteSchema).default({}),
+  themes: z
+    .record(z.string(), colorPaletteSchema)
+    .default({ [MONOKAI_OCTAGON]: defaultMonokaiOctagonPalette }),
   activeTheme: stringField().default(""),
   keybindings: z.array(keybindingSchema).default([]),
 });

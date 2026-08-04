@@ -47,7 +47,8 @@ Skill library symlinked at `.agents/skills/` (or `.codex/skills/` depending on t
 
 ## Lessons Learned
 <!-- One-line bullets, <15 words, prune weekly -->
-- _(empty)_
+- yao-pkg produces non-deterministic exes; replaced with Node SEA (deterministic, build-verified by port probe).
+- SEA sentinel string varies per Node build; read it from the binary, don't trust the docs.
 
 ## Decisions Log
 <!-- Stable architectural decisions. Link ADRs where they exist. -->

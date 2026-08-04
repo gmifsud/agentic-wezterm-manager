@@ -302,9 +302,22 @@ end
 
 -- Directory of this generated file, resolved at load time. dofile sets source
 -- to '@<path>'; loading from a string instead leaves managerDir empty.
+--
+-- WezTerm's Lua sandbox strips the debug library, so debug.getinfo(1, S)
+-- raises "attempt to index a nil value (global 'debug')" on every fresh load.
+-- Without this guard the entire generated file fails to dofile, which makes
+-- the user's wezterm.lua pcall catch it and set agentic=nil, which makes
+-- startup_args fall back to default_prog on every pane — and the layout boots
+-- with empty PowerShell prompts instead of the configured commands.
 local function manager_dir()
-  local source = debug.getinfo(1, 'S').source
-  local path = string.match(source, '^@(.*)$')
+  -- Inert in WezTerm (debug is nil); live in vanilla Lua 5.1 / LuaJIT.
+  local ok, info = pcall(function()
+    return debug.getinfo and debug.getinfo(1, 'S') or nil
+  end)
+  if not ok or not info then
+    return ''
+  end
+  local path = string.match(info.source or '', '^@(.*)$')
   if not path then
     return ''
   end
