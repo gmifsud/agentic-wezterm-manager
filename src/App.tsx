@@ -205,8 +205,23 @@ function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(config),
     })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to save");
+      .then(async (res) => {
+        if (!res.ok) {
+          // Pull the structured error from the response body so the user
+          // sees what's wrong (e.g. which field failed validation) instead
+          // of an opaque "Failed to save".
+          const detail = await res.json().catch(() => null);
+          const msg =
+            detail?.issues
+              ? `Validation failed: ${detail.issues
+                  .map(
+                    (i: { path?: string[]; message: string }) =>
+                      `${i.path?.join(".") ?? "?"}: ${i.message}`,
+                  )
+                  .join("; ")}`
+              : detail?.error ?? `Failed to save (HTTP ${res.status})`;
+          throw new Error(msg);
+        }
         setSavedConfig(JSON.parse(JSON.stringify(config)));
       })
       .catch((err) => setError(err.message));

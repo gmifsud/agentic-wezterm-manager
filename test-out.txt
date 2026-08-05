@@ -5,34 +5,26 @@
 
  RUN  v4.1.4 D:/Repos/CLI/agentic-wezterm-manager
 
- ❯ src/__tests__/lua-wezterm-sandbox.test.ts (2 tests | 1 failed) 74ms
-     × loads cleanly when debug=nil (wezterm sandbox) 73ms
+ ❯ src/__tests__/schema.test.ts (10 tests | 1 failed) 17ms
+     × should reject strings exceeding max length 3ms
 
 ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
 
- FAIL  src/__tests__/lua-wezterm-sandbox.test.ts > generated lua runs under wezterm-like sandbox > loads cleanly when debug=nil (wezterm sandbox)
-AssertionError: lua interpreter lua failed: status=1 stderr=FAIL: [string "C:\Users\grego\AppData\Local\Temp\lua-sandb..."]:113: attempt to call field 'unpack' (a nil value)
-: expected 1 to be +0 // Object.is equality
-
-- Expected
-+ Received
-
-- 0
-+ 1
-
- ❯ src/__tests__/lua-wezterm-sandbox.test.ts:63:9
-     61|         result.status,
-     62|         `lua interpreter ${bin} failed: status=${result.status} stderr…
-     63|       ).toBe(0);
-       |         ^
-     64|       expect(result.stdout).toContain('OK under wezterm sandbox');
-     65|       expect(result.stderr).not.toContain('attempt to index a nil valu…
+ FAIL  src/__tests__/schema.test.ts > agenticConfigSchema > should reject strings exceeding max length
+AssertionError: expected [Function] to throw an error
+ ❯ src/__tests__/schema.test.ts:128:53
+    126|     const longString = 'a'.repeat(1001);
+    127|     const config = { ...minimalConfig, workspaceName: longString };
+    128|     expect(() => agenticConfigSchema.parse(config)).toThrow();
+       |                                                     ^
+    129|   });
+    130|
 
 ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
 
 
  Test Files  1 failed | 3 passed (4)
-      Tests  1 failed | 45 passed (46)
-   Start at  20:05:14
-   Duration  739ms (transform 156ms, setup 0ms, import 320ms, tests 364ms, environment 1.02s)
+      Tests  1 failed | 40 passed (41)
+   Start at  17:34:48
+   Duration  1.01s (transform 179ms, setup 0ms, import 354ms, tests 312ms, environment 1.52s)
 

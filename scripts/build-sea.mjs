@@ -135,7 +135,37 @@ function flipPeSubsystemToGui(exe) {
   );
 }
 
+function killAnyRunningExe() {
+  // A previous launch of the SEA exe is the most likely holder of the output
+  // file when a rebuild comes in. The exe is GUI-subsystem, so it doesn't
+  // own a console that the user can close. Killing it here is safe — any
+  // boot-trace / ready.json writes are durable, and any port it was bound
+  // to goes to TIME_WAIT for ~60 s before Windows re-issues it.
+  //
+  // We also kill any cmd.exe children that came from this release directory —
+  // those are the status-window wrappers which can also hold the SEA blob
+  // lock if they are actively reading from the snapshot.
+  if (process.platform !== "win32") return;
+  try {
+    const { execSync } = require("node:child_process");
+    execSync(
+      `taskkill /F /IM agentic-wezterm-manager.exe /T 2>nul; ` +
+        `taskkill /F /FI \"IMAGENAME eq cmd.exe\" /FI \"WINDOWTITLE eq Agentic WezTerm Manager\" /T 2>nul`,
+      { stdio: "ignore", windowsHide: true },
+    );
+  } catch {
+    // taskkill returns non-zero when no matching process exists, which is
+    // exactly what we want when there is nothing to kill. Swallow.
+  }
+}
+
 function run() {
+  // Kill any running instance first so the output file isn't locked.
+  // Without this, rebuild-package fails with EPERM if the exe from the
+  // previous build is still alive in the background (common when launched
+  // from Explorer — the user closes the window, but the taskbar entry
+  // stays as a zombie holding the file open).
+  killAnyRunningExe();
   if (!existsSync(bundlePath)) {
     throw new Error(
       `${bundlePath} not found. Run "npm run build:server" first.`,

@@ -123,9 +123,22 @@ describe('agenticConfigSchema', () => {
   });
 
   it('should reject strings exceeding max length', () => {
-    const longString = 'a'.repeat(1001);
+    // MAX_STRING_LENGTH in shared/schema.ts (10000) — exceed by one.
+    const longString = 'a'.repeat(10001);
     const config = { ...minimalConfig, workspaceName: longString };
     expect(() => agenticConfigSchema.parse(config)).toThrow();
+  });
+
+  it('should accept long startup commands (e.g. multi-line PowerShell)', () => {
+    // Real startup commands run full shell scripts and can be >1000 chars.
+    // A 1500-char string must be accepted; only >10000 chars should fail.
+    const longCommand = "echo 'start'; sleep 2; " + 'a'.repeat(1500);
+    // Parse an empty config first to get a fully-populated default config
+    // (including startup.layout.leftBottomCommand), then override the
+    // leftBottomCommand.command with our long string.
+    const baseParsed = agenticConfigSchema.parse({});
+    baseParsed.startup.layout.leftBottomCommand.command = longCommand;
+    expect(() => agenticConfigSchema.parse(baseParsed)).not.toThrow();
   });
 
   it('should validate nested appearance settings', () => {

@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-const MAX_STRING_LENGTH = 1000;
+// Bumped from 1000 to 10000 to support real startup scripts — a multi-line
+// PowerShell "boot the local AI stack" script is ~1100 chars on its own.
+// Strings elsewhere (workspace name, projectDir, etc.) don't need that
+// much but the cost of a higher cap is just a slightly slower zod parse.
+const MAX_STRING_LENGTH = 10000;
 const MAX_ARRAY_LENGTH = 100;
 
 const stringField = () =>

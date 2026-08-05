@@ -48,7 +48,7 @@
     "layout": {
       "type": "quad",
       "leftCommand": {
-        "command": "echo \"Consulting the oracle ....\"\n\ncd C:\\Users\\grego\\Documents\\Obsidian\\Knowledge\nStart-Process \"$env:LOCALAPPDATA\\Programs\\obsidian\\Obsidian.exe\" -ArgumentList \"--remote-debugging-port=9222\"\nsleep 5\ncd C:\\Users\\grego\\Documents\\Obsidian\\Knowledge\\Data\\Scripts\\obsidian-profiler\nnode profile.js",
+        "command": "echo \"Consulting the oracle ....\"\ncd C:\\Users\\grego\\Documents\\Obsidian\\Knowledge\nStart-Process \"$env:LOCALAPPDATA\\Programs\\obsidian\\Obsidian.exe\" -ArgumentList \"--remote-debugging-port=9222\",\"--js-flags=--max-old-space-size=8192\"\nsleep 5\ncd C:\\Users\\grego\\Documents\\Obsidian\\Knowledge\\Data\\Scripts\\obsidian-profiler; node profile.js",
         "shellType": "inherit",
         "customShell": ""
       },

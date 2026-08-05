@@ -237,6 +237,35 @@ function openStatusWindow(url: string, port: number): void {
   poll.unref();
 }
 
+// Close the visible status window by killing any process whose main window
+// has the title "Agentic WezTerm Manager". Used by shutdown() so the cmd
+// window closes whenever the exe exits — whether because the user closed
+// the window (which we already handled via polling the wrapper PID), or
+// because the server died, or because something else ran shutdown().
+//
+// We can't track the inner cmd's PID directly because it is spawned by
+// `start`, not by the wrapper cmd, so it is a grandchild of our wrapper.
+// Filtering by window title is the reliable signal — there is exactly one
+// window with that title for the lifetime of this process.
+function closeStatusWindow(): void {
+  if (process.platform !== 'win32') return;
+  // /F = force. /FI applies the filter. /IM matches by image name; we
+  // combine with the title filter to be precise.
+  const r = spawnSync(
+    'taskkill.exe',
+    ['/F', '/FI', 'WINDOWTITLE eq Agentic WezTerm Manager'],
+    { encoding: 'utf-8', windowsHide: true },
+  );
+  bootTrace(
+    'closeStatusWindow taskkill exit=' +
+      String(r.status) +
+      ' stdout=' +
+      String(r.stdout || '').trim() +
+      ' stderr=' +
+      String(r.stderr || '').trim(),
+  );
+}
+
 bootStage('unpack bundled scripts from snapshot', deployBundledScripts);
 
 bootTrace('BEGIN mount static assets and SPA fallback');
@@ -292,6 +321,9 @@ function openBrowser(url: string): void {
 
 function listen(port: number, attempt = 0): void {
   bootTrace(`about to listen on port ${port} (attempt ${attempt})`);
+  // Reset on every retry attempt — we only want 'close' to mean
+  // "we WERE listening and now we are not" for the CURRENT attempt.
+  wasListening = false;
   const server = app.listen(port, () => {
     const url = `http://localhost:${port}`;
     bootTrace(`listening on port ${port} at ${url}`);
@@ -305,6 +337,22 @@ function listen(port: number, attempt = 0): void {
       bootTrace('END open browser (spawn dispatched)');
     }
     bootTrace('boot complete');
+    wasListening = true;
+  });
+  // 'close' fires when the listening socket is closed — whether by us via
+  // httpServer.close() on shutdown, or because the server failed. That is
+  // the right signal that the server is no longer accepting connections,
+  // so the exe and the status window should follow it down (otherwise the
+  // cmd window outlives the thing it was describing, which is the
+  // "decoupled" state we are fixing). Note: 'error' on EADDRINUSE also
+  // emits 'close' before our retry in the error handler runs — so we
+  // gate this on wasListening to ensure we only react to "we WERE listening
+  // and now we are not", not to "we never listened, try the next port".
+  // httpServer.close()'s own callback also fires 'close' on graceful
+  // shutdown — shutdown() is idempotent so this is safe.
+  server.on('close', () => {
+    bootTrace('http server closed (was port=' + port + ', wasListening=' + wasListening + ')');
+    if (wasListening) shutdown('server-closed');
   });
   server.on('error', (err: NodeJS.ErrnoException) => {
     bootTrace(`listen error on port ${port}: ${err.code ?? err.message}`);
@@ -321,22 +369,37 @@ function listen(port: number, attempt = 0): void {
 listen(DEFAULT_PORT);
 
 // === Shutdown ============================================================
-// Idempotent. Called from three places:
+// Idempotent. Called from four places:
 //   1. SIGINT — Ctrl+C in a parent console, or `kill -INT <pid>`.
 //   2. SIGTERM — `taskkill /pid <pid>` (graceful) or any signal that
 //      Windows can translate. Note: closing the taskbar entry or
 //      `taskkill /F` use TerminateProcess which cannot be caught — those
 //      paths leave the port in TIME_WAIT (~60 s) until Windows releases it.
 //   3. SIGHUP — some Windows builds deliver this on taskbar Close.
+//   4. httpServer 'close' event — the server stopped accepting connections,
+//      which means it is no longer useful and the exe should follow.
 //
-// Closes the HTTP server (releases the port), removes ready.json so a
+// Closes the HTTP server (releases the port), kills the visible status
+// window so it doesn't outlive the server, removes ready.json so a
 // subsequent launch doesn't get confused, and exits with 0.
 let httpServer: ReturnType<typeof app.listen> | null = null;
+// True once the listening socket has actually accepted at least one
+// connection setup. Used to distinguish "the server crashed after it was
+// listening" (which should shut the exe down) from "listen() failed
+// before it ever started" (which is the EADDRINUSE retry case and must
+// NOT trigger shutdown). Reset to false on each listen() call so retries
+// after EADDRINUSE don't accumulate stale "we were listening" state.
+let wasListening = false;
 let shuttingDown = false;
 function shutdown(reason: string): void {
   if (shuttingDown) return;
   shuttingDown = true;
   bootTrace(`shutdown BEGIN reason=${reason}`);
+  // Close the status window FIRST so the user sees it disappear at the
+  // same moment they (or we) decided to shut down. This is what binds the
+  // window to the server's lifecycle: any path that runs shutdown()
+  // closes the window.
+  closeStatusWindow();
   try {
     if (httpServer) httpServer.close(() => bootTrace('http server closed'));
   } catch (err) {

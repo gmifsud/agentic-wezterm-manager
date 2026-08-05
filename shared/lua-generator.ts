@@ -396,100 +396,13 @@ function agentic.setup(config, wezterm, mux)
   end
   agentic._startup_registered = true
 
-  mux = mux or (wezterm and wezterm.mux)
-  if not wezterm or not mux then
-    return config
-  end
-
-  local data = agentic
-  local startup = data.startup or {}
-  local base_delay = startup.commandDelayMs or 500
-  -- Panes are staggered so four shells don't race to initialise at once.
-  local stagger = 300
-
-  local function spawn_opts(pane)
-    return {
-      args = agentic.startup_args(pane),
-      cwd = data.projectDir,
-    }
-  end
-
-  local function send_command(pane, command, delay_ms)
-    if not pane or not command or command == '' then
-      return
-    end
-    wezterm.time.call_after(delay_ms / 1000, function()
-      pane:send_text(agentic.expand_command(command) .. '\\r')
-    end)
-  end
-
-  local function send_all(entries, offset)
-    for index, entry in ipairs(entries) do
-      send_command(entry.pane, entry.command, base_delay + (offset + index - 1) * stagger)
-    end
-  end
-
-  wezterm.on('gui-startup', function(cmd)
-    if not startup.enabled then
-      mux.spawn_window(cmd or {})
-      return
-    end
-
-    local layout = startup.layout or {}
-    local tab, main_pane, window = mux.spawn_window(spawn_opts(layout.leftCommand))
-    local entries = {
-      { pane = main_pane, command = layout.leftCommand and layout.leftCommand.command },
-    }
-
-    if layout.type == 'quad' then
-      local right_top = main_pane:split {
-        direction = 'Right',
-        size = 0.5,
-        args = agentic.startup_args(layout.rightTopCommand),
-        cwd = data.projectDir,
-      }
-      local left_bottom = main_pane:split {
-        direction = 'Bottom',
-        size = 0.5,
-        args = agentic.startup_args(layout.leftBottomCommand),
-        cwd = data.projectDir,
-      }
-      local right_bottom = right_top:split {
-        direction = 'Bottom',
-        size = 0.5,
-        args = agentic.startup_args(layout.rightBottomCommand),
-        cwd = data.projectDir,
-      }
-
-      table.insert(entries, { pane = right_top, command = layout.rightTopCommand and layout.rightTopCommand.command })
-      table.insert(entries, { pane = left_bottom, command = layout.leftBottomCommand and layout.leftBottomCommand.command })
-      table.insert(entries, { pane = right_bottom, command = layout.rightBottomCommand and layout.rightBottomCommand.command })
-    end
-
-    send_all(entries, 0)
-
-    local tab_entries = {}
-    for _, tab_config in ipairs(startup.extraTabs or {}) do
-      local extra_tab, extra_pane = window:spawn_tab(spawn_opts(tab_config))
-      if tab_config.title and tab_config.title ~= '' then
-        extra_tab:set_title(tab_config.title)
-      end
-      table.insert(tab_entries, { pane = extra_pane, command = tab_config.command })
-    end
-    send_all(tab_entries, #entries)
-
-    if data.workspaceName and data.workspaceName ~= '' then
-      tab:set_title(data.workspaceName)
-    end
-    tab:activate()
-
-    if data.appearance and data.appearance.window and data.appearance.window.startMaximized then
-      local gui_window = window:gui_window()
-      if gui_window then
-        gui_window:maximize()
-      end
-    end
-  end)
+  -- We deliberately do NOT register a gui-startup handler here. The user's
+  -- wezterm.lua already registers its own gui-startup handler that creates
+  -- the quad layout and spawns the extra tabs from the same schema data
+  -- this module exposes. Registering a second handler here would cause two
+  -- windows to open at launch. The schema/controller pair is the single
+  -- source of truth for the layout; the user's wezterm.lua is the executor
+  -- that reads it.
 
   return config
 end
